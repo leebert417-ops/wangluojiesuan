@@ -5,22 +5,23 @@
 clear; clc;
 
 %% 输入参数
-% 各巷道风阻 (单位: N·s²/m⁸ 或其他一致单位)
-% 巷道编号顺序: 1, 2, 3, 4, 5, 6, 7, 8
-R = [0.1, 0.2, 0.15, 0.25, 0.18, 0.22, 0.20, 0.12];  % 示例风阻值
+% 从CSV文件读取各巷道风阻
+data = readtable('network_data.csv');
+R = data.resistance';  % 转置为行向量
 
 % 初始总风量 (单位: m³/s)
-Q_total = 100;  % 示例总风量
+Q_total = 100;  % 可根据需要修改
 
 %% 求解
 fprintf('========================================\n');
 fprintf('通风网络Hardy Cross迭代法求解\n');
 fprintf('========================================\n');
 fprintf('输入参数:\n');
+fprintf('数据来源: network_data.csv\n');
 fprintf('总风量 Q_total = %.2f m³/s\n', Q_total);
 fprintf('各巷道风阻:\n');
 for i = 1:length(R)
-    fprintf('  R(%d) = %.4f\n', i, R(i));
+    fprintf('  巷道 %d: R = %.4f\n', i, R(i));
 end
 fprintf('========================================\n\n');
 
