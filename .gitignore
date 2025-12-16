@@ -1,0 +1,52 @@
+# MATLAB temporary files
+*.asv
+*.m~
+
+# MATLAB autosave files
+*.autosave
+
+# Simulink autosave
+*.slxc
+
+# MATLAB compiled files
+*.p
+*.mex*
+*.mat
+
+# MATLAB code generation folders
+codegen/
+slprj/
+
+# Simulink cache files
+*.slxc
+slprj/
+
+# MATLAB App Designer files
+*.mlapp~
+
+# Figures and results (optional - uncomment if you want to track these)
+# *.png
+# *.jpg
+# *.fig
+# ventilation_results.csv
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*~
+*.bak
+*.tmp
