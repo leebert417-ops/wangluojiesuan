@@ -24,11 +24,15 @@ slprj/
 # MATLAB App Designer files
 *.mlapp~
 
-# Figures and results (optional - uncomment if you want to track these)
-# *.png
-# *.jpg
-# *.fig
-# ventilation_results.csv
+# Output files (results from running scripts)
+ventilation_results.csv
+ventilation_network_results.png
+*.fig
+
+# Test files
+test_*.m
+analyze_*.m
+*_v2.m
 
 # OS generated files
 .DS_Store
