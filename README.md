@@ -26,30 +26,24 @@
 - `iterations`: 实际迭代次数
 
 #### 2. `main_script.m`
-主脚本，演示如何使用求解器。直接在代码中设置参数。
+主脚本，从CSV文件读取数据并求解。
 
-**使用方法**:
-```matlab
-% 修改输入参数
-R = [0.1, 0.2, 0.15, 0.25, 0.18, 0.22, 0.20, 0.12];
-Q_total = 100;
-
-% 运行脚本
-main_script
-```
-
-#### 3. `solve_from_csv.m`
-从CSV文件读取数据并求解的脚本。
+**功能特性**:
+- 从 `network_data.csv` 读取风阻数据
+- 输出详细的求解结果和验证信息
+- 自动保存结果到 `ventilation_results.csv`
+- 生成完整的可视化图形（4个子图）
+- 保存图像到 `ventilation_network_results.png`
 
 **使用方法**:
 ```matlab
 % 1. 编辑 network_data.csv 文件，设置各巷道风阻
-% 2. 在脚本中修改总风量 Q_total
+% 2. （可选）在脚本第14行修改总风量 Q_total
 % 3. 运行脚本
-solve_from_csv
+main_script
 ```
 
-#### 4. `network_data.csv`
+#### 3. `network_data.csv`
 输入数据文件，包含各巷道风阻。
 
 **格式**:
@@ -106,18 +100,20 @@ branch,resistance
 
 ### 快速开始
 
-#### 方式1: 使用默认参数
+#### 方式1: 使用主脚本（推荐）
 ```matlab
+% 1. 编辑 network_data.csv 设置您的风阻值
+% 2. （可选）修改 main_script.m 第14行的 Q_total
+% 3. 运行脚本
 main_script
 ```
 
-#### 方式2: 从CSV文件读取
-```matlab
-% 编辑 network_data.csv 设置风阻值
-solve_from_csv
-```
+**输出内容**:
+- 控制台显示详细的求解过程和验证结果
+- 自动保存 `ventilation_results.csv`（风量数据）
+- 自动保存 `ventilation_network_results.png`（可视化图形）
 
-#### 方式3: 自定义使用
+#### 方式2: 自定义使用求解器
 ```matlab
 % 定义风阻
 R = [0.1, 0.2, 0.15, 0.25, 0.18, 0.22, 0.20, 0.12];
@@ -145,6 +141,9 @@ disp(Q);
 - `ventilation_network_results.png`: 可视化结果图
 
 #### 可视化图形
+
+`main_script.m` 会生成包含4个子图的完整可视化结果：
+
 1. **风量柱状图**: 显示各巷道风量大小
 2. **压降柱状图**: 显示各巷道压力损失
 3. **网络拓扑图**: 带标注的网络结构图
