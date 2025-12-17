@@ -10,7 +10,9 @@
       "Bash(git fetch:*)",
       "Bash(gh repo edit:*)",
       "Bash(timeout 15 matlab:*)",
-      "Bash(timeout 20 matlab:*)"
+      "Bash(timeout 20 matlab:*)",
+      "Bash(dir:*)",
+      "Bash(cat:*)"
     ]
   }
 }
