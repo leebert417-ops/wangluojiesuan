@@ -4,7 +4,13 @@
       "Bash(git init:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(matlab -batch:*)",
+      "Bash(git rm:*)",
+      "Bash(git fetch:*)",
+      "Bash(gh repo edit:*)",
+      "Bash(timeout 15 matlab:*)",
+      "Bash(timeout 20 matlab:*)"
     ]
   }
 }
