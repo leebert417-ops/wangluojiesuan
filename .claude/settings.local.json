@@ -12,7 +12,16 @@
       "Bash(timeout 15 matlab:*)",
       "Bash(timeout 20 matlab:*)",
       "Bash(dir:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(delete_selected_rows_from_uitable.m export_uitable_to_branches_csv.m add_new_row_to_uitable.m)",
+      "Bash(del /Q \"+data\\example_load_data.m\" \"+logic\\example_input_structure.m\" \"+ui\\example_solve_usage.m\" \"+ui\\example_plot_network_usage.m\")",
+      "Bash(tree /F /A \"D:\\MATLAB\\wangluojiesuan\")",
+      "Bash(findstr:*)",
+      "Bash(del /Q \"+gps\\+data\\README.md\" \"+gps\\+ui\\README.md\" \"test_case_10x11\\README.md\" \"to_do.md\")",
+      "Bash(for file in \"D:\\MATLAB\\wangluojiesuan\\General Problem Solver\\+gps\\+ui\"/{add_new_row_to_uitable,append_to_textarea,clear_uitable,delete_selected_rows_from_uitable,import_branches_csv,import_branches_csv_to_uitable,export_uitable_to_branches_csv}.m)",
+      "Bash(head:*)",
+      "Bash(done)"
     ]
   }
 }

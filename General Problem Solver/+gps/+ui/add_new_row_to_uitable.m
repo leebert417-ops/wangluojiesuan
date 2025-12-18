@@ -21,7 +21,7 @@ function newRowIndex = add_new_row_to_uitable(uitableHandle)
 % 版本：
 %   v1.0 (2025-12-18) - 初始版本
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     arguments
         uitableHandle (1,1) matlab.ui.control.Table
@@ -107,13 +107,9 @@ function newRowIndex = add_new_row_to_uitable(uitableHandle)
         % 旧版本不支持滚动，忽略
     end
 
-    % 8. 提示用户（可选，取消注释启用）
+    % 8. 提示用户（可选，添加行操作无需弹窗）
     % uifig = ancestor(uitableHandle, 'matlab.ui.Figure', 'toplevel');
     % if ~isempty(uifig)
-    %     uialert(uifig, sprintf('已添加新行（ID=%d）\n请编辑起点、终点和风阻', newID), ...
-    %         '提示', 'Icon', 'info');
+    %     uialert(uifig, sprintf('已添加新行: ID=%d', newID), '提示', 'Icon', 'info');
     % end
-
-    % 9. 输出到命令窗口（调试用）
-    fprintf('✓ 已添加新行: ID=%d (行号=%d)\n', newID, newRowIndex);
 end

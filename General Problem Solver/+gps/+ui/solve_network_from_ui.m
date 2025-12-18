@@ -31,7 +31,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
 % 版本：
 %   v1.0 (2025-12-18) - 初始版本
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     % 初始化返回值
     Q = [];
@@ -168,7 +168,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
             if isfinite(maxIter) && maxIter > 0
                 SolverOptions.max_iter = round(maxIter);
             else
-                warning('最大迭代数无效（%s），使用默认值 1000', string(app.EditField_4.Value));
+                % 无效值，使用默认值（不输出警告到命令行）
                 SolverOptions.max_iter = 1000;
             end
         else
@@ -181,7 +181,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
             if isfinite(tol) && tol > 0
                 SolverOptions.tolerance = tol;
             else
-                warning('收敛容差无效（%s），使用默认值 1e-3', string(app.EditField_5.Value));
+                % 无效值，使用默认值（不输出警告到命令行）
                 SolverOptions.tolerance = 1e-3;
             end
         else
@@ -194,46 +194,38 @@ function [Q, Results, success] = solve_network_from_ui(app)
             if isfinite(relax) && relax > 0 && relax <= 2
                 SolverOptions.relaxation = relax;
             else
-                warning('松弛因子超出范围（%g），使用默认值 1.0', relax);
+                % 超出范围，使用默认值（不输出警告到命令行）
                 SolverOptions.relaxation = 1.0;
             end
         else
             SolverOptions.relaxation = 1.0;
         end
 
-        % 信息显示
+        % 信息显示 - 从 UI 读取 VERBOSE 设置
+        verboseOutput = false;  % 默认不输出详细信息
         if isprop(app, 'DropDown') && ~isempty(app.DropDown.Value)
             verboseStr = string(app.DropDown.Value);
             if contains(lower(verboseStr), {'显示', 'show', 'true', 'yes'})
-                SolverOptions.verbose = true;
-            else
-                SolverOptions.verbose = false;
+                verboseOutput = true;
             end
-        else
-            SolverOptions.verbose = true;
         end
+        SolverOptions.verbose = false;  % 禁止求解器在命令行输出（但保留 verboseOutput 用于后处理）
 
         % 求解方法（预留，当前只有 Hardy Cross）
         if isprop(app, 'DropDown_2') && ~isempty(app.DropDown_2.Value)
             method = string(app.DropDown_2.Value);
-            if ~contains(lower(method), {'hardy', 'cross'})
-                warning('当前仅支持 Hardy Cross 方法');
-            end
+            % 不再输出警告，静默处理
         end
 
         % ========== 5. 调用求解器 ==========
-        fprintf('\n========================================\n');
-        fprintf(' 开始求解通风网络\n');
-        fprintf('========================================\n');
-        fprintf('分支数：%d\n', B);
-        fprintf('节点数：%d\n', N);
-        fprintf('总风量：%.6g m³/s\n', Boundary.Q_total);
-        fprintf('入风节点：%s\n', mat2str(Boundary.inlet_node));
-        fprintf('回风节点：%s\n', mat2str(Boundary.outlet_node));
-        fprintf('最大迭代数：%d\n', SolverOptions.max_iter);
-        fprintf('收敛容差：%.2e\n', SolverOptions.tolerance);
-        fprintf('松弛因子：%.2f\n', SolverOptions.relaxation);
-        fprintf('========================================\n\n');
+        % 向 TextArea 输出求解开始信息
+        if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+            msg = sprintf('[%s] 开始求解通风网络\n分支数：%d | 节点数：%d | 总风量：%.6g m³/s\n入风节点：%s | 回风节点：%s\n最大迭代数：%d | 收敛容差：%.2e | 松弛因子：%.2f\n', ...
+                datestr(now, 'HH:MM:SS'), B, N, Boundary.Q_total, ...
+                mat2str(Boundary.inlet_node), mat2str(Boundary.outlet_node), ...
+                SolverOptions.max_iter, SolverOptions.tolerance, SolverOptions.relaxation);
+            gps.ui.append_to_textarea(app.TextArea, msg);
+        end
 
         % 调用求解器
         [Q, Results] = gps.logic.ventilation_network_solver_generic( ...
@@ -243,34 +235,52 @@ function [Q, Results, success] = solve_network_from_ui(app)
 
         % ========== 6. 显示结果 ==========
         if success
-            fprintf('\n✓ 求解成功！\n');
-            fprintf('  迭代次数：%d\n', Results.iterations);
-            fprintf('  最大回路残差：%.6e\n', Results.max_residual);
-            fprintf('  最大节点残差：%.6e\n', max(abs(Results.node_residual)));
-            fprintf('\n各分支风量：\n');
-            for i = 1:min(B, 10)  % 最多显示前10个
-                fprintf('  分支 %2d：Q = %10.6f m³/s\n', i, Q(i));
-            end
-            if B > 10
-                fprintf('  ...\n  （共 %d 个分支）\n', B);
-            end
-            fprintf('\n');
+            % 向 TextArea 输出成功信息和详细结果
+            if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+                % 构建详细结果消息
+                msg = sprintf('[%s] ✓ 求解成功！\n迭代次数：%d | 最大回路残差：%.6e | 最大节点残差：%.6e\n', ...
+                    datestr(now, 'HH:MM:SS'), Results.iterations, Results.max_residual, max(abs(Results.node_residual)));
 
-            % 弹出成功提示
-            if ~isempty(uifig)
-                msg = sprintf('求解成功！\n\n迭代次数：%d\n最大回路残差：%.6e\n最大节点残差：%.6e', ...
-                    Results.iterations, Results.max_residual, max(abs(Results.node_residual)));
-                uialert(uifig, msg, '求解完成', 'Icon', 'success');
+                % 添加分支风量信息（所有分支）
+                msg = [msg, sprintf('各分支风量：\n')];
+                for i = 1:B
+                    msg = [msg, sprintf('  分支 %2d：Q = %10.6f m³/s\n', i, Q(i))];
+                end
+
+                gps.ui.append_to_textarea(app.TextArea, msg);
+            end
+
+            % ========== 7. VERBOSE 模式：输出详细结果 ==========
+            if verboseOutput
+                try
+                    % 7.1 绘制柱状图（风量和风压降）
+                    gps.ui.plot_solution_bars(Branches, Q, Results);
+
+                    % 7.2 导出结果到 CSV 文件
+                    filePath = gps.ui.export_solution_to_csv(Branches, Q, Results);
+
+                    % 7.3 向 TextArea 输出 VERBOSE 信息
+                    if isprop(app, 'TextArea') && ~isempty(app.TextArea) && strlength(filePath) > 0
+                        msg = sprintf('[%s] ✓ VERBOSE 模式：已生成柱状图和结果文件\n文件路径：%s\n', ...
+                            datestr(now, 'HH:MM:SS'), filePath);
+                        gps.ui.append_to_textarea(app.TextArea, msg);
+                    end
+
+                catch ME_verbose
+                    % VERBOSE 输出失败不影响求解结果
+                    if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+                        msg = sprintf('[%s] ⚠ VERBOSE 模式输出失败：%s\n', ...
+                            datestr(now, 'HH:MM:SS'), ME_verbose.message);
+                        gps.ui.append_to_textarea(app.TextArea, msg);
+                    end
+                end
             end
         else
-            warning('求解未完全收敛（迭代次数：%d，最大残差：%.6e）', ...
-                Results.iterations, Results.max_residual);
-
-            % 弹出警告
-            if ~isempty(uifig)
-                msg = sprintf('求解未完全收敛\n\n迭代次数：%d\n最大残差：%.6e\n建议：增加最大迭代数或调整松弛因子', ...
-                    Results.iterations, Results.max_residual);
-                uialert(uifig, msg, '警告', 'Icon', 'warning');
+            % 向 TextArea 输出警告信息
+            if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+                msg = sprintf('[%s] ⚠ 求解未完全收敛\n迭代次数：%d | 最大残差：%.6e\n建议：增加最大迭代数或调整松弛因子\n', ...
+                    datestr(now, 'HH:MM:SS'), Results.iterations, Results.max_residual);
+                gps.ui.append_to_textarea(app.TextArea, msg);
             end
         end
 
@@ -278,13 +288,10 @@ function [Q, Results, success] = solve_network_from_ui(app)
         % ========== 错误处理 ==========
         success = false;
 
-        fprintf('\n✗ 求解失败：%s\n\n', ME.message);
-
-        % 弹出错误提示
-        if ~isempty(uifig)
-            uialert(uifig, sprintf('求解失败：\n\n%s', ME.message), '错误', 'Icon', 'error');
-        else
-            errordlg(sprintf('求解失败：\n\n%s', ME.message), '错误');
+        % 向 TextArea 输出错误信息
+        if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+            msg = sprintf('[%s] ✗ 求解失败\n错误：%s\n', datestr(now, 'HH:MM:SS'), ME.message);
+            gps.ui.append_to_textarea(app.TextArea, msg);
         end
 
         % 重新抛出错误（可选，便于调试）

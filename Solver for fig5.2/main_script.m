@@ -5,6 +5,11 @@
 %   - 调用 ventilation_network_solver.m 计算各巷道风量 Q；
 %   - 输出结果表 ventilation_results.csv（中文表头）；
 %   - 生成结果图 ventilation_network_results.png（仅两张柱状图）。
+%
+% 版本：
+%   v1.0 (2025-12-18) - 初始版本
+%
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
 clear; clc;
 

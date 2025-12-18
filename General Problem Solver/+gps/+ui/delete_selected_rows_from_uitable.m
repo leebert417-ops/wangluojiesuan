@@ -25,7 +25,7 @@ function deletedCount = delete_selected_rows_from_uitable(uitableHandle, options
 % 版本：
 %   v1.0 (2025-12-18) - 初始版本
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     arguments
         uitableHandle (1,1) matlab.ui.control.Table
@@ -53,11 +53,6 @@ function deletedCount = delete_selected_rows_from_uitable(uitableHandle, options
 
     % 3. 检查表格是否为空
     if isempty(currentData) || height(currentData) == 0
-        if ~isempty(uifig)
-            uialert(uifig, '表格为空，无法删除', '提示');
-        else
-            warning('表格为空，无法删除');
-        end
         return;
     end
 
@@ -66,43 +61,40 @@ function deletedCount = delete_selected_rows_from_uitable(uitableHandle, options
 
     % 5. 检查是否有选中行
     if isempty(selectedRows)
-        if ~isempty(uifig)
-            uialert(uifig, '请先选中要删除的行\n（点击行号或单元格）', '提示');
-        else
-            warning('未选中任何行');
-        end
         return;
     end
 
-    % 6. 确认对话框（可选）
-    if options.confirm
+    % 6. 确认提示（如果启用）
+    if options.confirm && ~isempty(uifig)
         numRows = length(selectedRows);
 
         % 构建确认消息
         if strlength(options.confirmMsg) > 0
             confirmMsg = options.confirmMsg;
         else
-            if numRows == 1
-                rowIDs = currentData{selectedRows, 1};  % 第一列为 ID
-                confirmMsg = sprintf('确定要删除第 %d 行（ID=%d）吗？', ...
-                    selectedRows, rowIDs);
+            % 获取 ID 列数据（第一列）
+            if istable(currentData)
+                ids = currentData{selectedRows, 1};
             else
-                confirmMsg = sprintf('确定要删除选中的 %d 行吗？', numRows);
+                ids = currentData(selectedRows, 1);
+            end
+
+            if numRows == 1
+                confirmMsg = sprintf('确定要删除选中的 1 行吗？\n\nID: %d', ids);
+            else
+                confirmMsg = sprintf('确定要删除选中的 %d 行吗？\n\nID: %s', numRows, mat2str(ids(:)'));
             end
         end
 
         % 显示确认对话框
-        if ~isempty(uifig)
-            choice = uiconfirm(uifig, confirmMsg, '确认删除', ...
-                'Options', {'删除', '取消'}, ...
-                'DefaultOption', 2, ...
-                'CancelOption', 2, ...
-                'Icon', 'warning');
+        choice = uiconfirm(uifig, confirmMsg, '删除行', ...
+            'Options', {'删除', '取消'}, ...
+            'DefaultOption', 2, ...
+            'CancelOption', 2, ...
+            'Icon', 'warning');
 
-            if strcmp(choice, '取消')
-                fprintf('用户取消删除操作\n');
-                return;
-            end
+        if strcmp(choice, '取消')
+            return;
         end
     end
 
@@ -129,16 +121,9 @@ function deletedCount = delete_selected_rows_from_uitable(uitableHandle, options
         % 10. 清空选择状态
         uitableHandle.Selection = [];
 
-        % 11. 输出提示
-        fprintf('✓ 已删除 %d 行\n', deletedCount);
-
     catch ME
         % 删除失败
-        if ~isempty(uifig)
-            uialert(uifig, sprintf('删除失败: %s', ME.message), '错误');
-        else
-            error('删除失败: %s', ME.message);
-        end
+        error('删除失败: %s', ME.message);
     end
 end
 

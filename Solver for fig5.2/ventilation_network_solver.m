@@ -2,6 +2,11 @@ function [Q, iterations] = ventilation_network_solver(R, Q_total)
 % 用 Hardy Cross 回路迭代解算固定 8 巷道网络
 % 输入：R(1×8) 风阻系数（正），Q_total 总风量（正）
 % 输出：Q(1×8) 风量（相对约定方向，可为负），iterations 迭代次数
+%
+% 版本：
+%   v1.0 (2025-12-18) - 初始版本
+%
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     % 输入校验
     R = R(:).'; % 统一为行向量

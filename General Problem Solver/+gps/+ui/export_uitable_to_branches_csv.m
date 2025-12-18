@@ -21,7 +21,7 @@ function success = export_uitable_to_branches_csv(uitableHandle, filePath)
 % 版本：
 %   v1.0 (2025-12-18) - 初始版本
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     arguments
         uitableHandle (1,1) matlab.ui.control.Table
@@ -48,13 +48,7 @@ function success = export_uitable_to_branches_csv(uitableHandle, filePath)
     % 3. 数据验证
     [isValid, errorMsg] = validateTableData(data);
     if ~isValid
-        if ~isempty(uifig)
-            uialert(uifig, errorMsg, '数据验证失败');
-        else
-            error('数据验证失败: %s', errorMsg);
-        end
-        restoreFocus(uifig, uitableHandle);
-        return;
+        error('数据验证失败: %s', errorMsg);
     end
 
     % 4. 打开文件保存对话框
@@ -77,22 +71,16 @@ function success = export_uitable_to_branches_csv(uitableHandle, filePath)
         writeGPSCSV(filePath, T);
         success = true;
 
-        % 成功提示
+        % 成功提示弹窗
         if ~isempty(uifig)
-            uialert(uifig, sprintf('成功导出 %d 条分支数据到:\n%s', height(T), filePath), ...
+            uialert(uifig, ...
+                sprintf('成功导出 %d 条分支数据到:\n%s', height(T), filePath), ...
                 '导出成功', 'Icon', 'success');
-        else
-            fprintf('✓ 成功导出 %d 条分支数据到: %s\n', height(T), filePath);
         end
 
     catch ME
         % 写入失败
-        if ~isempty(uifig)
-            uialert(uifig, sprintf('文件写入失败:\n%s', ME.message), ...
-                '导出失败', 'Icon', 'error');
-        else
-            error('文件写入失败: %s', ME.message);
-        end
+        error('文件写入失败: %s', ME.message);
     end
 
     % 7. 恢复焦点

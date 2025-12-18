@@ -1,5 +1,5 @@
 function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, SolverOptions)
-% 通用通风网络求解器（Hardy Cross），边界采用“入/回风节点”
+% 通用通风网络求解器（Hardy Cross），边界采用"入/回风节点"
 %
 % Branches（必需字段）：
 %   .id        (B×1) 分支编号（要求为 1..B）
@@ -17,6 +17,11 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
 %   .tolerance   收敛容差（默认 1e-3）
 %   .relaxation  欠松弛系数（默认 1.0）
 %   .verbose     是否打印信息（默认 true）
+%
+% 版本：
+%   v1.0 (2025-12-18) - 初始版本
+%
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     if nargin < 2
         error('至少需要提供 Branches 和 Boundary');

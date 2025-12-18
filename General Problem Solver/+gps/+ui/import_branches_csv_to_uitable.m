@@ -53,7 +53,15 @@ function T = import_branches_csv_to_uitable(uitableHandle, filePath)
     uitableHandle.Data = table(T.id, T.from_node, T.to_node, T.R, ...
         'VariableNames', {'ID', '起点', '终点', '风阻'});
 
-    % 5. 恢复焦点（关键优化）
+    % 5. 成功提示弹窗
+    if ~isempty(uifig)
+        [~, fileName, fileExt] = fileparts(filePath);
+        uialert(uifig, ...
+            sprintf('成功导入 %d 条分支数据\n\n文件: %s%s', height(T), fileName, fileExt), ...
+            '导入成功', 'Icon', 'success');
+    end
+
+    % 6. 恢复焦点（关键优化）
     restoreFocus(uifig, uitableHandle);
 end
 

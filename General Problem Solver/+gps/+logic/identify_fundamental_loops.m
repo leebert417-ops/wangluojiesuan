@@ -33,7 +33,7 @@
 %   Branches.to_node   = [2; 3; 2; 4; 5; 4; 6; 6];
 %   [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches);
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 % 日期：2025-12-17
 
 function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
@@ -65,8 +65,7 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
     % 使用 MATLAB 内置 graph 对象（无向图）
     % 注意：此处忽略分支方向，仅用于生成树构建
 
-    edge_list = [Branches.from_node, Branches.to_node];
-    G = graph(edge_list(:,1), edge_list(:,2));
+    G = graph(Branches.from_node, Branches.to_node);
 
     % 检查图的连通性
     bins = conncomp(G);

@@ -30,7 +30,7 @@ function success = clear_uitable(uitableHandle, options)
 % 版本：
 %   v1.0 (2025-12-18) - 初始版本
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
     arguments
         uitableHandle (1,1) matlab.ui.control.Table
@@ -57,11 +57,6 @@ function success = clear_uitable(uitableHandle, options)
 
     % 3. 检查表格是否已经为空
     if isempty(currentData) || height(currentData) == 0
-        if ~isempty(uifig)
-            uialert(uifig, '表格已经为空', '提示');
-        else
-            warning('表格已经为空');
-        end
         success = true;  % 已经是空的，算作成功
         return;
     end
@@ -69,34 +64,25 @@ function success = clear_uitable(uitableHandle, options)
     % 4. 记录当前行数（用于提示）
     numRows = height(currentData);
 
-    % 5. 确认对话框（默认显示）
-    if options.confirm
+    % 5. 确认提示（如果启用）
+    if options.confirm && ~isempty(uifig)
         % 构建确认消息
         if strlength(options.confirmMsg) > 0
             confirmMsg = options.confirmMsg;
         else
-            confirmMsg = sprintf('确定要清空表格中的所有数据吗？\n\n当前共有 %d 行数据。\n此操作不可撤销！', numRows);
+            confirmMsg = sprintf('确定要清空表格吗？\n\n这将删除所有 %d 行数据，此操作不可撤销。', numRows);
         end
 
         % 显示确认对话框
-        if ~isempty(uifig)
-            choice = uiconfirm(uifig, confirmMsg, '确认清空', ...
-                'Options', {'清空', '取消'}, ...
-                'DefaultOption', 2, ...
-                'CancelOption', 2, ...
-                'Icon', 'warning');
+        choice = uiconfirm(uifig, confirmMsg, '清空表格', ...
+            'Options', {'确定', '取消'}, ...
+            'DefaultOption', 2, ...
+            'CancelOption', 2, ...
+            'Icon', 'warning');
 
-            if strcmp(choice, '取消')
-                fprintf('用户取消清空操作\n');
-                return;
-            end
-        else
-            % 命令行环境，使用 questdlg
-            choice = questdlg(confirmMsg, '确认清空', '清空', '取消', '取消');
-            if ~strcmp(choice, '清空')
-                fprintf('用户取消清空操作\n');
-                return;
-            end
+        if strcmp(choice, '取消')
+            success = false;
+            return;
         end
     end
 
@@ -120,22 +106,9 @@ function success = clear_uitable(uitableHandle, options)
         % 标记成功
         success = true;
 
-        % 输出提示
-        fprintf('✓ 已清空表格（删除了 %d 行数据）\n', numRows);
-
-        % 显示成功提示（可选）
-        if ~isempty(uifig) && options.confirm
-            uialert(uifig, sprintf('已成功清空 %d 行数据', numRows), '完成', 'Icon', 'success');
-        end
-
     catch ME
         % 清空失败
         success = false;
-
-        if ~isempty(uifig)
-            uialert(uifig, sprintf('清空失败: %s', ME.message), '错误');
-        else
-            error('清空失败: %s', ME.message);
-        end
+        error('清空失败: %s', ME.message);
     end
 end

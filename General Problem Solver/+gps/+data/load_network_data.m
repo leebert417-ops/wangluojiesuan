@@ -36,7 +36,7 @@ function [Branches, Boundary, SolverOptions] = load_network_data(data_dir)
 %   % 从指定目录加载
 %   [Branches, Boundary, Options] = gps.data.load_network_data('./my_network/');
 %
-% 作者：MATLAB 通风工程专家助手
+% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 % 日期：2025-12-17
 
     %% ========== 参数处理 ==========
