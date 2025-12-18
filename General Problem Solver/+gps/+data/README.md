@@ -60,8 +60,8 @@ branch_id,from_node,to_node,resistance
 | 参数名 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
 | `Q_TOTAL` | 正实数 | 系统总风量（单位：m³/s） | 100 |
-| `INLET_BRANCH` | 整数列表 | 入风分支编号，多个用分号分隔 | 1;2 |
-| `OUTLET_BRANCH` | 整数列表 | 回风分支编号，多个用分号分隔 | 7;8 |
+| `INLET_NODE` | 整数列表 | 入风节点编号，多个用分号分隔 | 1 |
+| `OUTLET_NODE` | 整数列表 | 回风节点编号，多个用分号分隔 | 6 |
 
 ### 示例
 
@@ -69,17 +69,17 @@ branch_id,from_node,to_node,resistance
 # 系统总风量
 Q_TOTAL,100
 
-# 入风分支（节点1流出）
-INLET_BRANCH,1;2
+# 入风节点
+INLET_NODE,1
 
-# 回风分支（流向节点6）
-OUTLET_BRANCH,7;8
+# 回风节点
+OUTLET_NODE,6
 ```
 
 ### 注意事项
 
-- 多个分支编号用**分号(;)**分隔
-- 所有分支编号必须在 `branches.csv` 中存在
+- 多个节点编号用**分号(;)**分隔
+- 节点编号必须在网络节点范围内
 - 支持多入口和多出口网络
 
 ---
@@ -199,10 +199,10 @@ cp +gps/+data/boundary_template.csv my_network/boundary.csv
 
 ### Q2：能否有多个入口或出口？
 
-可以！在 `boundary.csv` 中用分号分隔多个分支编号：
+可以！在 `boundary.csv` 中用分号分隔多个节点编号：
 ```csv
-INLET_BRANCH,1;2;3
-OUTLET_BRANCH,7;8;9
+INLET_NODE,1;2;3
+OUTLET_NODE,7;8;9
 ```
 
 ### Q3：节点编号必须连续吗？

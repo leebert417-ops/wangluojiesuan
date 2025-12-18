@@ -36,7 +36,11 @@
 % 作者：MATLAB 通风工程专家助手
 % 日期：2025-12-17
 
-function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches)
+function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
+
+    if nargin < 2 || isempty(verbose)
+        verbose = false;
+    end
 
     %% ========== 第1步：提取网络拓扑参数 ==========
 
@@ -81,10 +85,12 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches)
     % 识别非树边（弦）
     chord_branches = find(~is_tree_edge);
 
-    fprintf('生成树构建完成：\n');
-    fprintf('  生成树包含 %d 条边\n', length(tree_edges));
-    fprintf('  非树边（弦）数量 = %d\n', length(chord_branches));
-    fprintf('  独立回路数 M = %d\n\n', length(chord_branches));
+    if verbose
+        fprintf('生成树构建完成：\n');
+        fprintf('  生成树包含 %d 条边\n', length(tree_edges));
+        fprintf('  非树边（弦）数量 = %d\n', length(chord_branches));
+        fprintf('  独立回路数 M = %d\n\n', length(chord_branches));
+    end
 
     if length(chord_branches) ~= M
         warning('实际非树边数量（%d）与理论独立回路数（%d）不符！', ...
@@ -108,7 +114,8 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches)
         % 在生成树中找到 u → v 的唯一路径
         % 使用 MATLAB shortestpath（在树中就是唯一路径）
         tree_graph = build_tree_graph(tree_edges, Branches, N);
-        [tree_path_nodes, ~] = shortestpath(tree_graph, u, v);
+        % 为保证回路方向与弦（chord）分支方向一致，取树路径 v -> u，然后再走弦 u -> v 闭合
+        [tree_path_nodes, ~] = shortestpath(tree_graph, v, u);
 
         if isempty(tree_path_nodes)
             warning('回路 %d：在生成树中未找到节点 %d → %d 的路径！', k, u, v);
@@ -136,7 +143,9 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches)
         LoopInfo(k).chord_branch = chord_id;
     end
 
-    fprintf('回路识别完成！共识别 %d 个独立回路\n\n', M_actual);
+    if verbose
+        fprintf('回路识别完成！共识别 %d 个独立回路\n\n', M_actual);
+    end
 
 end
 

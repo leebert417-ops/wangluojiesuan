@@ -74,11 +74,11 @@ Branches.name = {
 
 Boundary = struct();
 
-% 入风分支：节点1流出的分支1和分支2
-Boundary.inlet_branch = [1; 2];
+% 入风节点：节点1
+Boundary.inlet_node = 1;
 
-% 回风分支：流向节点6的分支7和分支8
-Boundary.outlet_branch = [7; 8];
+% 回风节点：节点6
+Boundary.outlet_node = 6;
 
 % 系统总风量（单位：m³/s）
 Boundary.Q_total = 100;
@@ -97,8 +97,8 @@ fprintf('分支数据结构（Branches）：\n');
 disp(struct2table(Branches));
 
 fprintf('\n边界条件（Boundary）：\n');
-fprintf('  入风分支: %s\n', mat2str(Boundary.inlet_branch'));
-fprintf('  回风分支: %s\n', mat2str(Boundary.outlet_branch'));
+fprintf('  入风节点: %s\n', mat2str(Boundary.inlet_node'));
+fprintf('  回风节点: %s\n', mat2str(Boundary.outlet_node'));
 fprintf('  总风量: %.2f m³/s\n', Boundary.Q_total);
 
 fprintf('\n求解器参数（SolverOptions）：\n');
@@ -160,16 +160,16 @@ Branches2.R = [0.1; 0.2; 0.15; 0.25];
 Branches2.name = {'上部横巷'; '左侧立井'; '下部横巷'; '右侧立井'};
 
 Boundary2 = struct();
-Boundary2.inlet_branch = 1;    % 分支1入风
-Boundary2.outlet_branch = 4;   % 分支4回风
+Boundary2.inlet_node = 1;    % 节点1入风
+Boundary2.outlet_node = 4;   % 节点4回风
 Boundary2.Q_total = 50;
 
 fprintf('分支数据：\n');
 disp(struct2table(Branches2));
 
 fprintf('\n边界条件：\n');
-fprintf('  入风分支: %d\n', Boundary2.inlet_branch);
-fprintf('  回风分支: %d\n', Boundary2.outlet_branch);
+fprintf('  入风节点: %d\n', Boundary2.inlet_node);
+fprintf('  回风节点: %d\n', Boundary2.outlet_node);
 fprintf('  总风量: %.2f m³/s\n', Boundary2.Q_total);
 
 fprintf('\n理论分析：\n');
@@ -232,8 +232,8 @@ fprintf('     • name       : 分支名称（用于可视化）\n\n');
 
 fprintf('2. Boundary（边界条件结构体）\n');
 fprintf('   - 必需字段：\n');
-fprintf('     • inlet_branch  : 入风分支编号（标量或向量）\n');
-fprintf('     • outlet_branch : 回风分支编号（标量或向量）\n');
+fprintf('     • inlet_node    : 入风节点编号（标量或向量）\n');
+fprintf('     • outlet_node   : 回风节点编号（标量或向量）\n');
 fprintf('     • Q_total       : 总风量 (m³/s)\n\n');
 
 fprintf('【可选输入】\n\n');

@@ -59,7 +59,7 @@ if exist('Branches', 'var') && exist('Boundary', 'var')
         % 注意：需要 identify_fundamental_loops.m 支持
         fprintf('正在求解...\n\n');
 
-        [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, Options);
+        [Q, Results] = gps.logic.ventilation_network_solver_generic(Branches, Boundary, Options);
 
         % 显示结果
         fprintf('\n========== 求解结果 ==========\n');
@@ -124,8 +124,8 @@ fclose(fid);
 fid = fopen([custom_dir, 'boundary.csv'], 'w', 'n', 'UTF-8');
 fprintf(fid, '# 边界条件\n');
 fprintf(fid, 'Q_TOTAL,50\n');
-fprintf(fid, 'INLET_BRANCH,1;2\n');
-fprintf(fid, 'OUTLET_BRANCH,3;4\n');
+fprintf(fid, 'INLET_NODE,1\n');
+fprintf(fid, 'OUTLET_NODE,4\n');
 fclose(fid);
 
 fprintf('已创建自定义网络数据: %s\n', custom_dir);

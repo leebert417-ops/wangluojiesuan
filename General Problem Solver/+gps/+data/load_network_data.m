@@ -19,8 +19,8 @@ function [Branches, Boundary, SolverOptions] = load_network_data(data_dir)
 %
 %   Boundary      - 边界条件结构体
 %                   .Q_total       总风量 (标量)
-%                   .inlet_branch  入风分支编号 (向量)
-%                   .outlet_branch 回风分支编号 (向量)
+%                   .inlet_node    入风节点编号 (向量)
+%                   .outlet_node   回风节点编号 (向量)
 %
 %   SolverOptions - 求解器参数结构体
 %                   .max_iter   最大迭代次数
@@ -158,21 +158,25 @@ function Boundary = load_boundary(filepath)
             case 'Q_TOTAL'
                 Boundary.Q_total = str2double(value);
 
-            case 'INLET_BRANCH'
-                % 解析分号分隔的分支编号
-                branch_strs = strsplit(value, ';');
-                Boundary.inlet_branch = zeros(length(branch_strs), 1);
-                for i = 1:length(branch_strs)
-                    Boundary.inlet_branch(i) = str2double(branch_strs{i});
+            case 'INLET_NODE'
+                node_strs = strsplit(value, ';');
+                Boundary.inlet_node = zeros(length(node_strs), 1);
+                for i = 1:length(node_strs)
+                    Boundary.inlet_node(i) = str2double(node_strs{i});
                 end
 
-            case 'OUTLET_BRANCH'
-                % 解析分号分隔的分支编号
-                branch_strs = strsplit(value, ';');
-                Boundary.outlet_branch = zeros(length(branch_strs), 1);
-                for i = 1:length(branch_strs)
-                    Boundary.outlet_branch(i) = str2double(branch_strs{i});
+            case 'OUTLET_NODE'
+                node_strs = strsplit(value, ';');
+                Boundary.outlet_node = zeros(length(node_strs), 1);
+                for i = 1:length(node_strs)
+                    Boundary.outlet_node(i) = str2double(node_strs{i});
                 end
+
+            case 'INLET_BRANCH'
+                error('boundary.csv 参数 INLET_BRANCH 已弃用，请改用 INLET_NODE（入风节点）');
+
+            case 'OUTLET_BRANCH'
+                error('boundary.csv 参数 OUTLET_BRANCH 已弃用，请改用 OUTLET_NODE（回风节点）');
         end
     end
 
@@ -182,11 +186,11 @@ function Boundary = load_boundary(filepath)
     if ~isfield(Boundary, 'Q_total')
         error('boundary.csv 缺少必需参数: Q_TOTAL');
     end
-    if ~isfield(Boundary, 'inlet_branch')
-        error('boundary.csv 缺少必需参数: INLET_BRANCH');
+    if ~isfield(Boundary, 'inlet_node')
+        error('boundary.csv 缺少必需参数: INLET_NODE');
     end
-    if ~isfield(Boundary, 'outlet_branch')
-        error('boundary.csv 缺少必需参数: OUTLET_BRANCH');
+    if ~isfield(Boundary, 'outlet_node')
+        error('boundary.csv 缺少必需参数: OUTLET_NODE');
     end
 end
 
@@ -289,27 +293,23 @@ function validate_network_data(Branches, Boundary)
         error('总风量必须为正数！');
     end
 
-    % 4. 检查边界分支是否存在
-    all_branches = Branches.id;
-    inlet_invalid = ~ismember(Boundary.inlet_branch, all_branches);
-    if any(inlet_invalid)
-        error('入风分支编号 %d 不存在！', Boundary.inlet_branch(find(inlet_invalid, 1)));
-    end
-
-    outlet_invalid = ~ismember(Boundary.outlet_branch, all_branches);
-    if any(outlet_invalid)
-        error('回风分支编号 %d 不存在！', Boundary.outlet_branch(find(outlet_invalid, 1)));
-    end
-
-    % 5. 检查节点编号
+    % 4. 检查节点编号
     max_node = max([Branches.from_node; Branches.to_node]);
     min_node = min([Branches.from_node; Branches.to_node]);
     if min_node < 1
         error('节点编号必须从1开始！');
     end
+    inlet_invalid = Boundary.inlet_node < 1 | Boundary.inlet_node > max_node;
+    if any(inlet_invalid)
+        error('入风节点编号 %d 不存在！', Boundary.inlet_node(find(inlet_invalid, 1)));
+    end
+    outlet_invalid = Boundary.outlet_node < 1 | Boundary.outlet_node > max_node;
+    if any(outlet_invalid)
+        error('回风节点编号 %d 不存在！', Boundary.outlet_node(find(outlet_invalid, 1)));
+    end
 
     fprintf('  分支数: %d\n', length(Branches.id));
     fprintf('  节点数: %d\n', max_node);
-    fprintf('  入风分支: [%s]\n', num2str(Boundary.inlet_branch'));
-    fprintf('  回风分支: [%s]\n', num2str(Boundary.outlet_branch'));
+    fprintf('  入风节点: [%s]\n', num2str(Boundary.inlet_node'));
+    fprintf('  回风节点: [%s]\n', num2str(Boundary.outlet_node'));
 end
