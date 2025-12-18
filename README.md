@@ -404,7 +404,7 @@ max(abs(Q_generic - Q_specific'))  % 应 < 1e-6
 如有问题或建议，请通过以下方式联系：
 
 - 📧 **邮箱**：`leebert417@gmail.com`
-- 🌐 **项目仓库**：[GitHub仓库](https://github.com/leebert417-ops/wangluojiesuan)
+- 🌐 **项目仓库**：[GitHub仓库](https://github.com/leebert417-ops/wangluojiesuan) 或 [GitLab仓库](https://gitlab.com/leebert417-group/wangluojiesuan.git)
 - 🐛 **问题反馈**：[GitHub Issues](https://github.com/leebert417-ops/wangluojiesuan/issues)
 
 ---
