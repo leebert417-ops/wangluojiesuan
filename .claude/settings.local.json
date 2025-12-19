@@ -21,7 +21,8 @@
       "Bash(del /Q \"+gps\\+data\\README.md\" \"+gps\\+ui\\README.md\" \"test_case_10x11\\README.md\" \"to_do.md\")",
       "Bash(for file in \"D:\\MATLAB\\wangluojiesuan\\General Problem Solver\\+gps\\+ui\"/{add_new_row_to_uitable,append_to_textarea,clear_uitable,delete_selected_rows_from_uitable,import_branches_csv,import_branches_csv_to_uitable,export_uitable_to_branches_csv}.m)",
       "Bash(head:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(python:*)"
     ]
   }
 }
