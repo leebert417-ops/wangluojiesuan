@@ -86,11 +86,13 @@
 
 ### 通用求解器使用流程
 
-**安装自定义APP（🌟推荐）**：
+#### **一 . 仅下载APP(🌟推荐)**
 
-安装包位置：[跳转到文件](/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall)
+**1. MATLAB内安装自定义APP（MATLAB2019a及以上）**：
 
-或直接下载：[点击下载（GitHub）](https://github.com/leebert417-ops/wangluojiesuan/releases/download/v1.0.0/SimpleVentilationNetworkSolver.mlappinstall)或[点击下载（GitLab）](https://gitlab.com/leebert417-group/wangluojiesuan/-/raw/master/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall?ref_type=heads&inline=false)
+安装包位置：[跳转到文件](/General%20Problem%20Solver/ui/)
+
+或直接下载：[点击下载（GitHub）](https://github.com/leebert417-ops/wangluojiesuan/releases/download/v1.1.0/SimpleVentilationNetworkSolver_v1.1.0.mlappinstall)或[点击下载（GitLab）](https://gitlab.com/leebert417-group/wangluojiesuan/-/raw/master/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver_v1.1.0.mlappinstall?ref_type=heads&inline=false)
 
 ```matlab
 % 1. 下载APP安装包
@@ -102,7 +104,29 @@
 % 7. 查看结果（文本日志 + 可视化图表）
 ```
 
-**或通过命令行启动APP**：
+**2. 无需MATLAB的打包版本**：
+
+下载[web下载器](https://github.com/leebert417-ops/wangluojiesuan/blob/master/General%20Problem%20Solver/package/SimpleVentilationNetworkSolverAppv1_1_0/for_redistribution/MyAppInstaller_web.exe)
+
+然后双击自动下载，后续操作同上
+
+#### **二 . 下载整个项目到本地**
+
+在本页面下载源代码压缩包，或使用下面的git指令：
+
+```powershell
+# 从GitHub仓库克隆到本地
+git clone https://github.com/leebert417-ops/wangluojiesuan.git
+```
+
+或
+
+```powershell
+# 从GitLab克隆
+git clone https://gitlab.com/leebert417-group/wangluojiesuan.git
+```
+
+**1. 通过命令行启动APP**：
 
 ```matlab
 % 1. 启动图形界面
@@ -116,7 +140,7 @@ NetworkSolverApp
 % 5. 查看结果（文本日志 + 可视化图表）
 ```
 
-**或通过命令行调用脚本**：
+**2. 或通过命令行调用脚本**：
 
 ```matlab
 % 加载网络数据
