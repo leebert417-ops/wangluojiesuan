@@ -1,6 +1,6 @@
 # 通风网络解算系统 (Ventilation Network Solver Suite)
 
-**在站点阅读：**[跳转站点（GitHub）](https://leebert417-ops.github.io/wangluojiesuan/)或[跳转站点（GitLab）]()
+**在站点阅读：**[跳转站点（GitHub）](https://leebert417-ops.github.io/wangluojiesuan/)或[跳转站点（GitLab）](https://wangluojiesuan-cfa24e.gitlab.io/)
 
 ## 项目简介
 
