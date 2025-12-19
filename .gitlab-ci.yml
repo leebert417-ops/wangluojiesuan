@@ -5,10 +5,11 @@ pages:
   image: node:22
   stage: pages
   rules:
-    - if: $CI_COMMIT_BRANCH
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
       changes:
         - document/**/*
         - .gitlab-ci.yml
+    - when: never
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -25,4 +26,3 @@ pages:
     paths:
       - public
     expire_in: 1 week
-
