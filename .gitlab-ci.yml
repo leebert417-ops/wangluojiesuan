@@ -17,11 +17,17 @@ pages:
   script:
     - cd document
     - npm ci
-    # GitLab Pages 的 URL 通常是：
-    # - https://<group>.gitlab.io/<project>/
-    # - https://<group>.gitlab.io/<subgroup>/<project>/
-    # 因此 base 应该是去掉最前面的 group 后的路径（即 ${CI_PROJECT_PATH#*/}）。
-    - export VITEPRESS_BASE="/${CI_PROJECT_PATH#*/}/"
+    # GitLab Pages 的实际站点路径在不同实例/配置下可能不同（例如 classic/unique domain），
+    # 因此优先从 CI_PAGES_URL 解析出 pathname 作为 VitePress base。
+    - |
+      if [ -n "$CI_PAGES_URL" ]; then
+        VITEPRESS_BASE="$(node -e "const u=new URL(process.env.CI_PAGES_URL); let p=u.pathname; if(!p.endsWith('/')) p+='/'; console.log(p);")"
+      else
+        VITEPRESS_BASE="/${CI_PROJECT_PATH#*/}/"
+      fi
+      export VITEPRESS_BASE
+      echo "CI_PAGES_URL=$CI_PAGES_URL"
+      echo "VITEPRESS_BASE=$VITEPRESS_BASE"
     - npm run docs:build
     - cd ..
     - rm -rf public
