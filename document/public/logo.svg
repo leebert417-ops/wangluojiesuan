@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="520" viewBox="0 0 520 520">
+  <defs>
+    <style><![CDATA[
+      .edge { stroke: #374151; stroke-width: 30; stroke-linecap: round; }
+      .edge-in { stroke: #16a34a; stroke-width: 36; stroke-linecap: round; }
+      .edge-out { stroke: #dc2626; stroke-width: 36; stroke-linecap: round; }
+      .node { fill: #e0f2fe; stroke: #1d4ed8; stroke-width: 2; }
+      .node-in { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; }
+      .node-out { fill: #fee2e2; stroke: #dc2626; stroke-width: 2; }
+    ]]></style>
+  </defs>
+<line x1="260.0" y1="90.0" x2="407.2" y2="175.0" class="edge"/>
+<line x1="407.2" y1="175.0" x2="407.2" y2="345.0" class="edge"/>
+<line x1="407.2" y1="345.0" x2="260.0" y2="430.0" class="edge"/>
+<line x1="260.0" y1="430.0" x2="112.8" y2="345.0" class="edge"/>
+<line x1="112.8" y1="345.0" x2="112.8" y2="175.0" class="edge"/>
+<line x1="112.8" y1="175.0" x2="260.0" y2="90.0" class="edge"/>
+<line x1="407.2" y1="175.0" x2="112.8" y2="345.0" class="edge"/>
+<line x1="260.0" y1="6.0" x2="260.0" y2="66.0" class="edge-in"/>
+<line x1="260.0" y1="454.0" x2="260.0" y2="514.0" class="edge-out"/>
+<circle cx="260.0" cy="90.0" r="24.0" class="node-in"/>
+<circle cx="407.2" cy="175.0" r="24.0" class="node"/>
+<circle cx="407.2" cy="345.0" r="24.0" class="node"/>
+<circle cx="260.0" cy="430.0" r="24.0" class="node-out"/>
+<circle cx="112.8" cy="345.0" r="24.0" class="node"/>
+<circle cx="112.8" cy="175.0" r="24.0" class="node"/>
+</svg>

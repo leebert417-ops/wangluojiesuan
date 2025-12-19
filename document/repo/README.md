@@ -1,3 +1,9 @@
+---
+title: 仓库 README（镜像）
+---
+
+> 本页镜像自仓库根目录 `README.md`，用于在 VitePress 站内阅读；少量链接已改为“站内链接”，其余若指向仓库路径请以仓库为准。
+
 # 通风网络解算系统 (Ventilation Network Solver Suite)
 
 ## 项目简介
@@ -17,7 +23,7 @@
 
 ## 项目结构
 
-### 1. [通用求解器 (General Problem Solver)](./General%20Problem%20Solver/)
+### 1. [通用求解器 (General Problem Solver)](/gps/README)
 
 **适用场景**：任意规模、任意拓扑的通风网络
 
@@ -39,11 +45,11 @@
 - 松弛因子控制（防止振荡）
 - 双重收敛判据（回路残差 + 风量变化）
 
-📖 **[查看详细文档 →](./General%20Problem%20Solver/README.md)**
+📖 **[查看详细文档 →](/gps/README)**
 
 ---
 
-### 2. [专用求解器 - 图5.2网络 (Solver for fig5.2)](./Solver%20for%20fig5.2/)
+### 2. [专用求解器 - 图5.2网络 (Solver for fig5.2)](/fig5.2/README)
 
 **适用场景**：固定 8 分支对角巷道角联网路（教材图 5.2）
 
@@ -66,7 +72,7 @@
 
 - 需要交作业的各位同学
 
-📖 **[查看详细文档 →](./Solver%20for%20fig5.2/README.md)**
+📖 **[查看详细文档 →](/fig5.2/README)**
 
 ---
 
@@ -90,7 +96,7 @@
 
 **1. MATLAB内安装自定义APP（MATLAB2019a及以上）**：
 
-安装包位置：[跳转到文件](/General%20Problem%20Solver/ui/)
+安装包位置：`General Problem Solver/ui/`
 
 或直接下载：[点击下载（GitHub）](https://github.com/leebert417-ops/wangluojiesuan/releases/download/v1.1.0/SimpleVentilationNetworkSolver_v1.1.0.mlappinstall)或[点击下载（GitLab）](https://gitlab.com/leebert417-group/wangluojiesuan/-/raw/master/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver_v1.1.0.mlappinstall?ref_type=heads&inline=false)
 
@@ -160,12 +166,12 @@ SolverOptions.verbose = true;
     Branches, Boundary, SolverOptions);
 ```
 
-***注***：对于上述步骤中导入数据这一步来说你同样可以使用[load_network_data.m](/General%20Problem%20Solver/+gps/+data/load_network_data.m)脚本完成，详见脚本头文件
+***注***：对于上述步骤中导入数据这一步来说你同样可以使用 `General Problem Solver/+gps/+data/load_network_data.m` 脚本完成，详见脚本头文件
 
 **3. 更详细的app外使用教程**：
 
-- 详见[app外使用教程](/General%20Problem%20Solver/OutAppUse.md)
-- 详细的函数说明文档[函数说明文档](/General%20Problem%20Solver/Functions.md)
+- 详见[app外使用教程](/gps/OutAppUse)
+- 详细的函数说明文档[函数说明文档](/gps/Functions)
   
 ---
 
@@ -437,7 +443,7 @@ max(abs(Q_generic - Q_specific'))  % 应 < 1e-6
 - ✅ 必须公开修改后的源代码
 - ⚠️ 不提供任何担保
 
-详见项目根目录下的 [`LICENSE`](./LICENSE) 文件，或访问 <https://www.gnu.org/licenses/gpl-3.0.html>。
+详见站内的 [许可证（GPL-3.0）](/许可证)，或访问 <https://www.gnu.org/licenses/gpl-3.0.html>。
 
 ---
 

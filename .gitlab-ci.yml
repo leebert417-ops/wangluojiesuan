@@ -1,0 +1,28 @@
+stages:
+  - pages
+
+pages:
+  image: node:22
+  stage: pages
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - document/**/*
+        - .gitlab-ci.yml
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - document/node_modules/
+  script:
+    - cd document
+    - npm ci
+    - export VITEPRESS_BASE="/${CI_PROJECT_NAME}/"
+    - npm run docs:build
+    - cd ..
+    - rm -rf public
+    - cp -r document/.vitepress/dist public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+

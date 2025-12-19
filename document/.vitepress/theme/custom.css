@@ -1,0 +1,13 @@
+/* 放大首页 Hero 区域的“开始阅读”按钮 */
+.VPHomeHero .actions .VPButton.brand {
+  font-size: 1.05rem;
+  padding: 0.62rem 1.2rem;
+  line-height: 1.1;
+}
+
+@media (min-width: 960px) {
+  .VPHomeHero .actions .VPButton.brand {
+    font-size: 1.1rem;
+    padding: 0.68rem 1.3rem;
+  }
+}
