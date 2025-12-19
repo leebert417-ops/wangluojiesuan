@@ -49,7 +49,7 @@ function T = import_branches_csv_to_uitable(uitableHandle, filePath)
     T = gps.ui.import_branches_csv(filePath);
 
     % 4. 更新表格
-    uitableHandle.ColumnName = {'ID', '起点', '终点', '风阻'};
+    uitableHandle.ColumnName = {'巷道ID', '起点（节点ID）', '终点（节点ID）', '风阻'};
     uitableHandle.Data = table(T.id, T.from_node, T.to_node, T.R, ...
         'VariableNames', {'ID', '起点', '终点', '风阻'});
 

@@ -1,4 +1,4 @@
-classdef NetworkSolverApp_exported < matlab.apps.AppBase
+classdef NetworkSolverApp_exported_v1_1_0 < matlab.apps.AppBase
 
     % Properties that correspond to app components
     properties (Access = public)
@@ -99,13 +99,13 @@ classdef NetworkSolverApp_exported < matlab.apps.AppBase
 
             % 3. 恢复按钮
             app.Button_6.Enable = 'on';
-            app.Button_6.Text = '求解';
+            app.Button_6.Text = '开始解算';
         end
 
         % Button pushed function: Button_7
         function ButtonPushed7(app, event)
             % 直接读取 UITable 中的数据并绘图
-            gps.ui.plot_network_graph(app.UITable);
+            gps.ui.plot_network_graph(app.UITable, [],app);
         end
     end
 
@@ -146,7 +146,7 @@ classdef NetworkSolverApp_exported < matlab.apps.AppBase
 
             % Create UITable
             app.UITable = uitable(app.GridLayout5);
-            app.UITable.ColumnName = {'ID'; '起点'; '终点'; '风阻'};
+            app.UITable.ColumnName = {'巷道ID'; '起点（节点ID）'; '终点（节点ID）'; '风阻'};
             app.UITable.RowName = {};
             app.UITable.SelectionType = 'row';
             app.UITable.ColumnEditable = true;
@@ -378,7 +378,7 @@ classdef NetworkSolverApp_exported < matlab.apps.AppBase
     methods (Access = public)
 
         % Construct app
-        function app = NetworkSolverApp_exported
+        function app = NetworkSolverApp_exported_v1_1_0
 
             % Create UIFigure and components
             createComponents(app)

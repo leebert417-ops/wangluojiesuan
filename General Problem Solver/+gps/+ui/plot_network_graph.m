@@ -1,13 +1,15 @@
-function G = plot_network_graph(uitableHandle, axesHandle)
+function G = plot_network_graph(uitableHandle, axesHandle, app)
 %PLOT_NETWORK_GRAPH 读取表格数据并绘制通风网络无向图
 %
 % 在 App Designer 的"显示网络图"按钮回调里：
 %   addpath('General Problem Solver');
-%   gps.ui.plot_network_graph(app.UITable, app.UIAxes);
+%   gps.ui.plot_network_graph(app.UITable, app.UIAxes, app);  % 推荐（可从 EditField_2/3 读取边界）
+%   gps.ui.plot_network_graph(app.UITable, app.UIAxes);       % 也可（会尝试从 UIFigure 子组件自动定位）
 %
 % 输入：
 %   uitableHandle: matlab.ui.control.Table（包含起点、终点列）
 %   axesHandle: matlab.ui.control.UIAxes 或 axes 句柄（可选）
+%   app: App Designer app 对象（可选，用于自动读取 EditField_2/3 的入/回风节点）
 %
 % 输出：
 %   G: graph 对象（无向图）
@@ -27,6 +29,7 @@ function G = plot_network_graph(uitableHandle, axesHandle)
     arguments
         uitableHandle (1,1) matlab.ui.control.Table
         axesHandle = []
+        app = []
     end
 
     % 初始化返回值
@@ -102,31 +105,66 @@ function G = plot_network_graph(uitableHandle, axesHandle)
         % 计算节点总数
         N = max([from_nodes(:); to_nodes(:)]);
 
-        % ========== 5. 使用 sparse 建立邻接矩阵 ==========
-        % 创建对称的邻接矩阵（无向图）
-        A = sparse([from_nodes; to_nodes], [to_nodes; from_nodes], ...
-                   [ones(B, 1); ones(B, 1)], N, N);
+        % ========== 5. 读取入风/回风节点（从 UI 的 EditField_2/3 自动获取，可选）==========
+        inlet_nodes = [];
+        outlet_nodes = [];
+        if nargin >= 3 && ~isempty(app)
+            [inlet_nodes, outlet_nodes] = readBoundaryNodesFromApp(app);
+        elseif ~isempty(uifig)
+            % 不传 app 时，尝试直接从 UIFigure 的子组件中定位“入风节点/回风节点”输入框
+            [inlet_nodes, outlet_nodes] = readBoundaryNodesFromUIFigure(uifig);
+        end
+        inlet_nodes = unique(inlet_nodes(:), 'stable');
+        outlet_nodes = unique(outlet_nodes(:), 'stable');
 
-        % ========== 6. 使用 graph 构建无向图 ==========
-        G = graph(A);
-
-        % 为图添加边的标签（分支 ID）
-        edgeIDs = cell(numedges(G), 1);
-        edgeTable = G.Edges;
-        for i = 1:numedges(G)
-            u = edgeTable.EndNodes(i, 1);
-            v = edgeTable.EndNodes(i, 2);
-
-            % 查找对应的分支 ID
-            idx = find((from_nodes == u & to_nodes == v) | ...
-                       (from_nodes == v & to_nodes == u), 1);
-            if ~isempty(idx)
-                edgeIDs{i} = sprintf('%d', branch_ids(idx));
-            else
-                edgeIDs{i} = '';
+        if ~isempty(inlet_nodes)
+            if any(~isfinite(inlet_nodes)) || any(inlet_nodes < 1) || any(mod(inlet_nodes, 1) ~= 0) || any(inlet_nodes > N)
+                error('入风节点必须为 1..%d 的正整数（当前：%s）', N, mat2str(inlet_nodes'));
             end
         end
-        G.Edges.BranchID = edgeIDs;
+        if ~isempty(outlet_nodes)
+            if any(~isfinite(outlet_nodes)) || any(outlet_nodes < 1) || any(mod(outlet_nodes, 1) ~= 0) || any(outlet_nodes > N)
+                error('回风节点必须为 1..%d 的正整数（当前：%s）', N, mat2str(outlet_nodes'));
+            end
+        end
+        if ~isempty(inlet_nodes) && ~isempty(outlet_nodes) && any(ismember(inlet_nodes, outlet_nodes))
+            error('入风节点与回风节点不能重复');
+        end
+
+        % ========== 6. 使用 Edge Table 构建无向图（避免 sparse 合并平行边）==========
+        EndNodes = [from_nodes(:), to_nodes(:)];
+        edgeLabel = string(branch_ids(:));
+        edgeType = repmat("branch", B, 1);
+
+        hasInlet = ~isempty(inlet_nodes);
+        hasOutlet = ~isempty(outlet_nodes);
+        sourceNode = [];
+        sinkNode = [];
+
+        if hasInlet
+            sourceNode = N + 1;
+            EndNodes = [EndNodes; [repmat(sourceNode, numel(inlet_nodes), 1), inlet_nodes(:)]];
+            edgeLabel = [edgeLabel; repmat("入风巷道", numel(inlet_nodes), 1)];
+            edgeType = [edgeType; repmat("inlet", numel(inlet_nodes), 1)];
+        end
+        if hasOutlet
+            if hasInlet
+                sinkNode = N + 2;
+            else
+                sinkNode = N + 1;
+            end
+            EndNodes = [EndNodes; [outlet_nodes(:), repmat(sinkNode, numel(outlet_nodes), 1)]];
+            edgeLabel = [edgeLabel; repmat("回风巷道", numel(outlet_nodes), 1)];
+            edgeType = [edgeType; repmat("outlet", numel(outlet_nodes), 1)];
+        end
+
+        edgeTable = table(EndNodes, edgeLabel, edgeType, ...
+            'VariableNames', {'EndNodes', 'Label', 'Type'});
+        G = graph(edgeTable);
+
+        % 节点名字用于内部标识即可；节点标签单独控制（可隐藏虚拟节点标签）
+        % 约定显示格式：N1, N2, ...
+        G.Nodes.Name = arrayfun(@(i) sprintf('N%d', i), (1:numnodes(G))', 'UniformOutput', false);
 
         % ========== 7. 绘制无向图 ==========
         % 确定绘图目标
@@ -145,15 +183,37 @@ function G = plot_network_graph(uitableHandle, axesHandle)
                  'NodeColor', [0.2 0.4 0.8], ...
                  'EdgeColor', [0.3 0.3 0.3]);
 
-        % 设置节点标签（节点编号）
-        h.NodeLabel = arrayfun(@num2str, (1:numnodes(G))', 'UniformOutput', false);
+        % 设置节点标签（隐藏 Inlet/Outlet 虚拟节点）
+        nodeLabels = G.Nodes.Name;
+        if hasInlet
+            nodeLabels{sourceNode} = '';
+        end
+        if hasOutlet
+            nodeLabels{sinkNode} = '';
+        end
+        h.NodeLabel = nodeLabels;
         h.NodeFontSize = 10;
         h.NodeFontWeight = 'bold';
 
-        % 设置边标签（分支 ID）
-        h.EdgeLabel = G.Edges.BranchID;
+        % 设置边标签
+        h.EdgeLabel = G.Edges.Label;
         h.EdgeFontSize = 9;
         h.EdgeColor = [0.4 0.4 0.4];
+
+        % 入风/回风“虚拟巷道”高亮显示
+        if hasInlet
+            inletEdgeIdx = find(G.Edges.Type == "inlet");
+            highlight(h, 'Edges', inletEdgeIdx, 'EdgeColor', [0.0 0.6 0.0], 'LineWidth', 2.5);
+            highlight(h, inlet_nodes, 'NodeColor', [0.0 0.6 0.0]);
+            % 虚拟节点不强调显示（避免出现 Inlet/Outlet）
+            highlight(h, sourceNode, 'NodeColor', [1 1 1], 'MarkerSize', 1);
+        end
+        if hasOutlet
+            outletEdgeIdx = find(G.Edges.Type == "outlet");
+            highlight(h, 'Edges', outletEdgeIdx, 'EdgeColor', [0.8 0.0 0.0], 'LineWidth', 2.5);
+            highlight(h, outlet_nodes, 'NodeColor', [0.8 0.0 0.0]);
+            highlight(h, sinkNode, 'NodeColor', [1 1 1], 'MarkerSize', 1);
+        end
 
         % 设置标题和坐标轴
         title(ax, sprintf('通风网络拓扑图\n节点数: %d | 分支数: %d', N, B), ...
@@ -162,7 +222,7 @@ function G = plot_network_graph(uitableHandle, axesHandle)
         axis(ax, 'off');
 
         % 添加图例说明
-        text(ax, 0.02, 0.98, sprintf('○ 节点编号\n━ 分支 ID'), ...
+        text(ax, 0.02, 0.98, sprintf('○ 节点ID（N1, N2, ...）\n━ 分支ID\n━ 绿色：入风巷道\n━ 红色：回风巷道'), ...
              'Units', 'normalized', 'VerticalAlignment', 'top', ...
              'FontSize', 9, 'Color', [0.5 0.5 0.5], ...
              'BackgroundColor', 'white', 'EdgeColor', [0.7 0.7 0.7]);
@@ -184,4 +244,122 @@ function G = plot_network_graph(uitableHandle, axesHandle)
             rethrow(ME);
         end
     end
+end
+
+
+function [inlet_nodes, outlet_nodes] = readBoundaryNodesFromApp(app)
+    inlet_nodes = [];
+    outlet_nodes = [];
+
+    try
+        if isprop(app, 'EditField_2') && ~isempty(app.EditField_2)
+            inlet_nodes = parseNodeList(app.EditField_2.Value);
+        end
+    catch
+        inlet_nodes = [];
+    end
+
+    try
+        if isprop(app, 'EditField_3') && ~isempty(app.EditField_3)
+            outlet_nodes = parseNodeList(app.EditField_3.Value);
+        end
+    catch
+        outlet_nodes = [];
+    end
+end
+
+
+function [inlet_nodes, outlet_nodes] = readBoundaryNodesFromUIFigure(uifig)
+    inlet_nodes = [];
+    outlet_nodes = [];
+
+    try
+        inlet_nodes = readNodesByLabelText(uifig, ["入风节点", "入风"]);
+    catch
+        inlet_nodes = [];
+    end
+
+    try
+        outlet_nodes = readNodesByLabelText(uifig, ["回风节点", "回风"]);
+    catch
+        outlet_nodes = [];
+    end
+end
+
+
+function nodes = readNodesByLabelText(uifig, keywords)
+    nodes = [];
+    labels = findall(uifig, '-isa', 'matlab.ui.control.Label');
+    if isempty(labels)
+        return;
+    end
+
+    targetLabel = [];
+    for i = 1:numel(labels)
+        txt = "";
+        try
+            txt = string(labels(i).Text);
+        catch
+        end
+        if strlength(txt) == 0
+            continue;
+        end
+        if any(contains(txt, keywords))
+            targetLabel = labels(i);
+            break;
+        end
+    end
+
+    if isempty(targetLabel) || ~isprop(targetLabel, 'Layout')
+        return;
+    end
+
+    parent = targetLabel.Parent;
+    if isempty(parent)
+        return;
+    end
+
+    row = [];
+    try
+        row = targetLabel.Layout.Row;
+    catch
+        row = [];
+    end
+    if isempty(row)
+        return;
+    end
+
+    fields = findall(parent, '-isa', 'matlab.ui.control.NumericEditField');
+    for i = 1:numel(fields)
+        try
+            if isprop(fields(i), 'Layout') && isequal(fields(i).Layout.Row, row) && isequal(fields(i).Layout.Column, 2)
+                nodes = parseNodeList(fields(i).Value);
+                return;
+            end
+        catch
+        end
+    end
+end
+
+
+function nodes = parseNodeList(value)
+    nodes = [];
+    if isempty(value)
+        return;
+    end
+
+    if isnumeric(value)
+        nodes = value(:);
+        nodes = nodes(isfinite(nodes));
+        return;
+    end
+
+    str = strtrim(string(value));
+    if strlength(str) == 0
+        return;
+    end
+
+    nodes = str2double(split(str, ','));
+    nodes = nodes(:);
+    nodes = nodes(isfinite(nodes));
 end

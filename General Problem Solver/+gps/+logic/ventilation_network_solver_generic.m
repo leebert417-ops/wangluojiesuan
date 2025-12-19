@@ -82,12 +82,30 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
         error('边界条件不守恒：sum(b) != 0');
     end
 
+    % ========================================================================
+    % 步骤 1：构造节点-分支关联矩阵 A (N×B)
+    % ========================================================================
+    % 物理含义：A 矩阵描述网络拓扑结构
+    %   - A(i,j) = +1：分支 j 从节点 i 流出
+    %   - A(i,j) = -1：分支 j 流入节点 i
+    %   - A(i,j) = 0： 分支 j 与节点 i 无关
+    % 基尔霍夫第一定律（节点流量守恒）表示为：A * Q = b
     A = incidence_matrix(Branches, N, B);
 
-    % 初始可行流：求一个满足 A*Q=b 的最小范数解（删去一行避免奇异）
+    % ========================================================================
+    % 步骤 2：生成初始可行流
+    % ========================================================================
+    % 目标：找到一个满足节点守恒的初始风量分布 Q0，使得 A*Q0 = b
+    % 方法：最小范数解（物理上相当于初始流场能量最小）
+    % 注意：此时 Q0 不满足回路压力平衡，需要后续 Hardy Cross 迭代修正
     Q = feasible_initial_flow(A, b);
 
-    % 自动识别独立回路
+    % ========================================================================
+    % 步骤 3：识别独立回路（基本回路）
+    % ========================================================================
+    % 物理背景：基尔霍夫第二定律要求每个回路的压力闭合（Σ ΔP = 0）
+    % 数学原理：对于 N 节点、B 分支的连通图，独立回路数 M = B - N + 1
+    % LoopMatrix (M×B)：每行代表一个回路，元素值为 +1/-1/0（表示分支在回路中的方向）
     if SolverOptions.verbose
         fprintf('========================================\n');
         fprintf(' 通用通风网络求解器（Hardy Cross）\n');
@@ -99,44 +117,86 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
     end
 
     [LoopMatrix, LoopInfo] = gps.logic.identify_fundamental_loops(Branches, SolverOptions.verbose);
-    M = size(LoopMatrix, 1);
+    M = size(LoopMatrix, 1);  % 独立回路数量
 
+    % ========================================================================
+    % 步骤 4：Hardy Cross 迭代求解
+    % ========================================================================
+    % 算法原理：
+    %   通过逐回路修正风量，使得所有回路满足压力平衡（基尔霍夫第二定律）
+    %   同时保持节点流量守恒（基尔霍夫第一定律）
+    %
+    % 修正公式推导：
+    %   对于回路 k，压力闭合差为 F_k = Σ(s_i * R_i * Q_i * |Q_i|)
+    %   设修正量为 ΔQ，则 F_k(Q + ΔQ*s_k) ≈ F_k(Q) + (∂F_k/∂Q)*ΔQ = 0
+    %   求解得：ΔQ = -F_k / (∂F_k/∂Q) = -Σ(s_i*R_i*Q_i*|Q_i|) / Σ(2*R_i*|Q_i|)
+    %
     max_iter = SolverOptions.max_iter;
     tol = SolverOptions.tolerance;
-    omega = SolverOptions.relaxation;
+    omega = SolverOptions.relaxation;  % 欠松弛系数（提高稳定性）
     residual_history = zeros(max_iter, 1);
     converged = false;
 
     for iter = 1:max_iter
-        Q_old = Q;
+        Q_old = Q;  % 保存上一步风量（用于计算变化量）
 
+        % ====================================================================
+        % 4.1 逐回路修正（Gauss-Seidel 风格：立即使用更新后的 Q）
+        % ====================================================================
         for k = 1:M
-            s_k = LoopMatrix(k, :)';   % (B×1)
-            idx = find(s_k ~= 0);
+            % 提取回路 k 的拓扑向量
+            s_k = LoopMatrix(k, :)';   % (B×1)：+1=顺回路方向, -1=逆回路方向, 0=不在回路中
+            idx = find(s_k ~= 0);      % 回路 k 包含的分支索引
 
-            dp = R(idx) .* Q(idx) .* abs(Q(idx));         % Δp_i = R_i*Q_i*|Q_i|
-            numerator = sum(s_k(idx) .* dp);              % Σ(s_i*Δp_i)
+            % ----------------------------------------------------------------
+            % 4.1.1 计算回路压力闭合差（基尔霍夫第二定律）
+            % ----------------------------------------------------------------
+            % Atkinson 阻力定律：Δp_i = R_i * Q_i * |Q_i|（带符号的压降）
+            dp = R(idx) .* Q(idx) .* abs(Q(idx));
 
+            % 回路压力闭合差（理想情况应为 0）
+            % numerator = Σ(s_i * Δp_i)：顺回路方向累加压降
+            numerator = sum(s_k(idx) .* dp);
+
+            % ----------------------------------------------------------------
+            % 4.1.2 计算修正量分母（雅可比矩阵对角项）
+            % ----------------------------------------------------------------
+            % 物理含义：∂(Δp_i)/∂Q_i = 2*R_i*|Q_i|（对 Q 的导数）
+            % 注意：当 Q_i 接近 0 时需要加小量避免除零
             q_abs_safe = max(abs(Q(idx)), 1e-6);
-            denominator = sum(2 * R(idx) .* q_abs_safe);  % Σ(2R|Q|)
+            denominator = sum(2 * R(idx) .* q_abs_safe);
 
+            % ----------------------------------------------------------------
+            % 4.1.3 计算风量修正量（Newton-Raphson 公式）
+            % ----------------------------------------------------------------
             if abs(denominator) > 1e-12
-                delta_Q = -numerator / denominator;
+                delta_Q = -numerator / denominator;  % Hardy Cross 修正公式
             else
-                delta_Q = 0.0;
+                delta_Q = 0.0;  % 回路退化（如所有分支 R→0），跳过修正
             end
 
+            % ----------------------------------------------------------------
+            % 4.1.4 更新回路中所有分支的风量
+            % ----------------------------------------------------------------
+            % 关键：s_k * delta_Q 确保顺回路方向的分支增加 delta_Q，逆向减少
+            % omega 为欠松弛系数：< 1 提高稳定性，= 1 为标准 Hardy Cross
             Q = Q + omega * s_k * delta_Q;
         end
 
-        % 用最新 Q 计算回路残差（避免耦合导致“虚假收敛”）
-        dp_all = R .* Q .* abs(Q);
-        loop_residual = LoopMatrix * dp_all;
-        max_residual = max(abs(loop_residual));
+        % ====================================================================
+        % 4.2 收敛性判断
+        % ====================================================================
+        % 用最新 Q 重新计算所有回路的压力残差（避免回路耦合导致"虚假收敛"）
+        dp_all = R .* Q .* abs(Q);              % 所有分支的压力损失
+        loop_residual = LoopMatrix * dp_all;    % 各回路的压力闭合差 (M×1)
+        max_residual = max(abs(loop_residual)); % 最大回路残差（收敛指标1）
 
-        max_change = max(abs(Q - Q_old));
+        max_change = max(abs(Q - Q_old));       % 最大风量变化（收敛指标2）
         residual_history(iter) = max_residual;
 
+        % 双重收敛准则：
+        %   1. 所有回路压力闭合（max_residual < tol）
+        %   2. 风量不再显著变化（max_change < tol）
         if max_residual < tol && max_change < tol
             converged = true;
             break;
@@ -178,30 +238,78 @@ end
 
 
 function A = incidence_matrix(Branches, N, B)
+% 构造节点-分支关联矩阵（Incidence Matrix）
+%
+% 输入：
+%   Branches - 分支数据结构
+%   N        - 节点总数
+%   B        - 分支总数
+%
+% 输出：
+%   A (N×B)  - 关联矩阵
+%
+% 物理含义：
+%   A 矩阵将离散的通风网络拓扑结构编码为线性代数对象
+%   基尔霍夫第一定律（节点流量守恒）可表示为：A * Q = b
+%   其中 b 为节点注入向量（入风>0，回风<0，中间节点=0）
+%
+% 矩阵元素定义：
+%   A(i,j) = +1 ：分支 j 从节点 i 流出（起点）
+%   A(i,j) = -1 ：分支 j 流入节点 i（终点）
+%   A(i,j) =  0 ：分支 j 与节点 i 无关
+
     A = zeros(N, B);
     for e = 1:B
-        u = Branches.from_node(e);
-        v = Branches.to_node(e);
-        A(u, e) = A(u, e) + 1;
-        A(v, e) = A(v, e) - 1;
+        u = Branches.from_node(e);  % 分支 e 的起点节点
+        v = Branches.to_node(e);    % 分支 e 的终点节点
+        A(u, e) = A(u, e) + 1;      % 起点：流出 +1
+        A(v, e) = A(v, e) - 1;      % 终点：流入 -1
     end
 end
 
 
 function Q0 = feasible_initial_flow(A, b)
+% 生成满足节点守恒的初始可行流（最小范数解）
+%
+% 输入：
+%   A (N×B) - 节点-分支关联矩阵
+%   b (N×1) - 节点注入向量（入风>0，回风<0，中间节点=0）
+%
+% 输出：
+%   Q0 (B×1) - 初始风量分布
+%
+% 算法原理：
+%   目标：求解欠定方程组 A * Q = b 的一个特解
+%   方法：最小范数解 Q0 = A^T * (A*A^T)^(-1) * b
+%
+% 物理意义：
+%   - Q0 满足节点流量守恒（基尔霍夫第一定律）
+%   - Q0 对应的流场"能量"最小（||Q0||^2 最小）
+%   - Q0 一般不满足回路压力平衡，需后续 Hardy Cross 迭代修正
+%
+% 技术细节：
+%   - A 的行向量线性相关（Σ行 = 0），需去掉一行避免奇异
+%   - 去掉节点 1（参考节点），相当于固定其电势为 0
+
     if size(A, 1) ~= numel(b)
         error('A 与 b 尺寸不匹配');
     end
 
-    % 去掉一行（参考节点）以避免 A*A' 奇异
-    A_red = A(2:end, :);
-    b_red = b(2:end);
-    M = A_red * A_red';
+    % 去掉第一行（参考节点）以避免 A*A' 奇异
+    % 数学原理：A 的行向量满足 Σ(row_i) = 0，秩为 N-1
+    A_red = A(2:end, :);  % (N-1)×B 降秩矩阵
+    b_red = b(2:end);     % (N-1)×1 降维向量
+
+    % 构造法方程：A_red * A_red^T * λ = b_red
+    M = A_red * A_red';   % (N-1)×(N-1) Gram 矩阵
     if rcond(M) < 1e-12
         error('网络关联矩阵奇异，无法生成可行初始流');
     end
+
+    % 最小范数解：Q0 = A_red^T * λ，其中 λ = (A_red*A_red^T)^(-1) * b_red
     Q0 = A_red' * (M \ b_red);
 
+    % 验证解的有效性（用完整的 A 检查节点守恒）
     if norm(A * Q0 - b, inf) > 1e-6 * max(1, norm(b, inf))
         error('无法构造满足节点守恒的初始流（请检查网络连通性与边界条件）');
     end
