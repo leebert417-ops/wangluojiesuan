@@ -86,9 +86,26 @@
 
 ### 通用求解器使用流程
 
+**安装自定义APP（🌟:star2::star2:推荐）**：
+
+安装包位置：[点击这里](/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall)
+
+```matlab
+% 1. 下载APP安装包
+% 2. 在MATLAB中加入自定义APP
+% 3. 启动APP
+% 4. 导入 CSV 数据或手动添加分支
+% 5. 设置边界条件（入风节点、回风节点、总风量）
+% 6. 点击"求解"按钮
+% 7. 查看结果（文本日志 + 可视化图表）
+```
+
+**或通过命令行启动APP**：
+
 ```matlab
 % 1. 启动图形界面
-cd 'D:\MATLAB\wangluojiesuan\General Problem Solver'
+cd '.\General Problem Solver';                  %你的路径
+addpath(General Problem Solver);
 NetworkSolverApp
 
 % 2. 导入 CSV 数据或手动添加分支
@@ -97,7 +114,7 @@ NetworkSolverApp
 % 5. 查看结果（文本日志 + 可视化图表）
 ```
 
-**或通过命令行调用**：
+**或通过命令行调用脚本**：
 
 ```matlab
 % 加载网络数据
@@ -116,6 +133,8 @@ SolverOptions.verbose = true;
 [Q, Results] = gps.logic.ventilation_network_solver_generic(...
     Branches, Boundary, SolverOptions);
 ```
+
+***注***：对于上述步骤中导入数据这一步来说你同样可以使用[load_network_data.m](/General%20Problem%20Solver/+gps/+data/load_network_data.m)脚本完成，详见脚本头文件
 
 ---
 
