@@ -24,8 +24,8 @@ features:
 ## 直接看用法
 
 <div style="display:flex; gap:12px; flex-wrap:wrap">
-  <a class="VPButton medium brand" href="/05_App使用">App 内使用</a>
-  <a class="VPButton medium alt" href="/06_App外用法">App 外使用</a>
+  <a class="VPButton medium brand" href="./05_App使用">App 内使用</a>
+  <a class="VPButton medium alt" href="./06_App外用法">App 外使用</a>
 </div>
 
 ## 本地运行

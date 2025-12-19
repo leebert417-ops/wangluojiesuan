@@ -17,7 +17,8 @@ pages:
   script:
     - cd document
     - npm ci
-    - export VITEPRESS_BASE="/${CI_PROJECT_NAME}/"
+    # GitLab Pages 的站点路径通常为 /<namespace>/<project>/ （含 subgroup 时也会包含在内）
+    - export VITEPRESS_BASE="/${CI_PROJECT_PATH}/"
     - npm run docs:build
     - cd ..
     - rm -rf public

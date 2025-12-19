@@ -1,5 +1,7 @@
 # 通风网络解算系统 (Ventilation Network Solver Suite)
 
+**在站点阅读：**[跳转站点（GitHub）](https://leebert417-ops.github.io/wangluojiesuan/)或[跳转站点（GitLab）]()
+
 ## 项目简介
 
 本项目是一套完整的**矿井通风网络解算系统**，基于 MATLAB 开发，用于计算复杂通风系统中各巷道的风量分配和风压损失。项目采用经典的 **Hardy Cross 迭代法**（哈迪-克罗斯法），包含通用求解器和专用求解器两个子系统。
