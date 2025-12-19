@@ -86,9 +86,11 @@
 
 ### 通用求解器使用流程
 
-**安装自定义APP（🌟:star2::star2:推荐）**：
+**安装自定义APP（🌟推荐）**：
 
-安装包位置：[点击这里](/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall)
+安装包位置：[跳转到文件](/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall)
+
+或直接下载：[点击下载（GitHub）](https://github.com/leebert417-ops/wangluojiesuan/releases/download/v1.0.0/SimpleVentilationNetworkSolver.mlappinstall)[点击下载（GitLab）](https://gitlab.com/leebert417-group/wangluojiesuan/-/raw/master/General%20Problem%20Solver/ui/SimpleVentilationNetworkSolver.mlappinstall?ref_type=heads&inline=false)
 
 ```matlab
 % 1. 下载APP安装包
