@@ -18,8 +18,28 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
 %   .relaxation  欠松弛系数（默认 1.0）
 %   .verbose     是否打印信息（默认 true）
 %
+% 输出：
+%   Q (B×1) 各分支风量（m^3/s），保留正负号（与输入 Branches 的正方向一致）
+%
+%   Results（结构体，常用字段）：
+%     .converged      是否收敛（logical）
+%     .iterations     迭代次数（double 标量）
+%     .max_residual   最大回路残差（double 标量）
+%     .residual_history 残差历史（iterations×1）
+%     .LoopMatrix     基本回路矩阵（M×B）
+%     .node_residual  节点守恒残差 A*Q-b（N×1）
+%     .pressure_drop  各分支风压降（Pa，正值，B×1）
+%     .network_info   网络规模信息（struct，含 N/B/M）
+%     .LoopInfo       回路信息（可选，struct array）
+%
+%   Results（风向对齐字段，用于导出/可视化）：
+%     .flow_reversed_mask        Q<0 的分支掩码（B×1 logical）
+%     .Branches_flow_aligned     将 Q<0 分支起止点交换后的 Branches（struct）
+%     .Q_flow_aligned            对齐后风量（B×1，非负）
+%     .node_residual_flow_aligned 对齐后节点残差（N×1）
+%
 % 版本：
-%   v1.0 (2025-12-18) - 初始版本
+%   v1.1 (2025-12-20) - 增加风向对齐输出与正值压降
 %
 % 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
@@ -216,8 +236,28 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
     Results.iterations = iter;
     Results.converged = converged;
     Results.LoopMatrix = LoopMatrix;
-    Results.pressure_diff_signed = R .* Q .* abs(Q);
-    Results.pressure_diff_abs = R .* (abs(Q) .^ 2);
+    Results.pressure_drop = R .* (abs(Q) .^ 2);
+
+    % ====================================================================
+    % 后处理：将“实际风向”统一为正向（Q >= 0），并同步修正起止点
+    % ====================================================================
+    % 约定：
+    %   - 原始输出 Q 仍保留正负号（与输入 Branches 的正方向一致）
+    %   - 额外提供对齐后的 Branches/Q（便于导出与可视化）
+    flow_reversed_mask = (Q(:) < 0);
+    Branches_flow_aligned = Branches;
+    if any(flow_reversed_mask)
+        tmp = Branches_flow_aligned.from_node(flow_reversed_mask);
+        Branches_flow_aligned.from_node(flow_reversed_mask) = Branches_flow_aligned.to_node(flow_reversed_mask);
+        Branches_flow_aligned.to_node(flow_reversed_mask) = tmp;
+    end
+    Q_flow_aligned = abs(Q(:));
+
+    Results.flow_reversed_mask = flow_reversed_mask;
+    Results.Branches_flow_aligned = Branches_flow_aligned;
+    Results.Q_flow_aligned = Q_flow_aligned;
+    Results.node_residual_flow_aligned = incidence_matrix(Branches_flow_aligned, N, B) * Q_flow_aligned - b;
+
     Results.max_residual = max_residual;
     Results.residual_history = residual_history(1:iter);
     Results.node_residual = A * Q - b;

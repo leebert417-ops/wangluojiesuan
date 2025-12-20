@@ -7,7 +7,7 @@ function plot_solution_bars(Branches, Q, Results)
 % 输入：
 %   Branches: 分支结构体（包含 id, from_node, to_node, R）
 %   Q: 各分支风量（B×1 向量，单位：m³/s）
-%   Results: 求解结果结构体（包含 pressure_diff_signed）
+%   Results: 求解结果结构体（包含 pressure_drop）
 %
 % 功能：
 %   - 创建两个子图：左侧为风量，右侧为风压降
@@ -30,12 +30,12 @@ function plot_solution_bars(Branches, Q, Results)
         error('风量向量长度与分支数不匹配');
     end
 
-    % 计算风压降（有符号）
-    if isfield(Results, 'pressure_diff_signed')
-        deltaP = Results.pressure_diff_signed;
+    % 计算风压降（正值）
+    if isfield(Results, 'pressure_drop')
+        deltaP = Results.pressure_drop(:);
     else
         % 如果没有，重新计算
-        deltaP = Branches.R(:) .* Q(:) .* abs(Q(:));
+        deltaP = Branches.R(:) .* (abs(Q(:)) .^ 2);
     end
 
     % 创建新的 figure（增加高度以容纳下方图例）
@@ -113,13 +113,7 @@ function plot_solution_bars(Branches, Q, Results)
     ax2 = subplot(1, 2, 2);
 
     % 绘制柱状图（增加间隔，BarWidth 默认 0.8，改为 0.6 增加间距）
-    b2 = bar(Branches.id, deltaP, 'FaceColor', 'flat', 'BarWidth', 0.6);
-
-    % 根据正负设置颜色
-    colors2 = zeros(B, 3);
-    colors2(deltaP >= 0, :) = repmat([0.2 0.6 0.4], sum(deltaP >= 0), 1);  % 正值：绿色
-    colors2(deltaP < 0, :) = repmat([0.9 0.5 0.2], sum(deltaP < 0), 1);   % 负值：橙色
-    b2.CData = colors2;
+    bar(Branches.id, deltaP, 'FaceColor', [0.2 0.6 0.4], 'BarWidth', 0.6);
 
     % 在柱顶标注数值
     hold on;
@@ -169,8 +163,7 @@ function plot_solution_bars(Branches, Q, Results)
 
     % 添加图例（放在图下方，靠近分支ID）
     h3 = bar(NaN, NaN, 'FaceColor', [0.2 0.6 0.4]);
-    h4 = bar(NaN, NaN, 'FaceColor', [0.9 0.5 0.2]);
-    lgd2 = legend([h3, h4], {'压降增加', '压降减少'}, ...
+    lgd2 = legend(h3, {'风压降'}, ...
                   'Location', 'southoutside', ...
                   'Orientation', 'horizontal');
     lgd2.FontSize = 10;

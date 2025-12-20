@@ -12,8 +12,8 @@ function [Q, Results, success] = solve_network_from_ui(app)
 %        - app.EditField_3      : 回风节点（逗号分隔）
 %        - app.EditField_4      : 最大迭代数
 %        - app.EditField_5      : 收敛容差
-%        - app.DropDown_2       : 求解方法（'Hardy Cross' 等）
-%        - app.DropDown         : 信息显示（'显示' 或 '隐藏'）
+%        - app.DropDown       : 求解方法（'Hardy Cross' 等）
+%        - app.DropDown_2         : 信息显示（'显示' 或 '隐藏'）
 %        - app.Slider           : 松弛因子（0~2）
 %        - app.UIFigure         : 主窗口（用于弹窗）
 %
@@ -201,27 +201,31 @@ function [Q, Results, success] = solve_network_from_ui(app)
             SolverOptions.relaxation = 1.0;
         end
 
-        % 信息显示 - 从 UI 读取 VERBOSE 设置
-        verboseOutput = false;  % 默认不输出详细信息
-        if isprop(app, 'DropDown') && ~isempty(app.DropDown.Value)
-            verboseStr = string(app.DropDown.Value);
-            if contains(lower(verboseStr), {'显示', 'show', 'true', 'yes'})
-                verboseOutput = true;
-            end
-        end
-        SolverOptions.verbose = false;  % 禁止求解器在命令行输出（但保留 verboseOutput 用于后处理）
-
         % 求解方法（预留，当前只有 Hardy Cross）
-        if isprop(app, 'DropDown_2') && ~isempty(app.DropDown_2.Value)
-            method = string(app.DropDown_2.Value);
+        method = "";
+        if isprop(app, 'DropDown') && ~isempty(app.DropDown) && ~isempty(app.DropDown.Value)
+            method = string(app.DropDown.Value);
             % 不再输出警告，静默处理
         end
+
+        % 图表输出（VERBOSE）：决定是否输出柱状图和导出 CSV
+        verboseOutput = false;  % 默认不输出
+        if isprop(app, 'DropDown_2') && ~isempty(app.DropDown_2) && ~isempty(app.DropDown_2.Value)
+            verboseStr = lower(strtrim(string(app.DropDown_2.Value)));
+            verboseOutput = any(verboseStr == ["true", "1", "yes", "y"]) || contains(verboseStr, ["显示", "show"]);
+        elseif isprop(app, 'DropDown') && ~isempty(app.DropDown) && ~isempty(app.DropDown.Value)
+            % 兼容旧 UI：若没有 DropDown_2，则尝试从 DropDown 读取
+            verboseStr = lower(strtrim(string(app.DropDown.Value)));
+            verboseOutput = any(verboseStr == ["true", "1", "yes", "y"]) || contains(verboseStr, ["显示", "show"]);
+        end
+
+        SolverOptions.verbose = false;  % 禁止求解器在命令行输出（但保留 verboseOutput 用于后处理）
 
         % ========== 5. 调用求解器 ==========
         % 向 TextArea 输出求解开始信息
         if isprop(app, 'TextArea') && ~isempty(app.TextArea)
             msg = sprintf('[%s] 开始求解通风网络\n分支数：%d | 节点数：%d | 总风量：%.6g m³/s\n入风节点：%s | 回风节点：%s\n最大迭代数：%d | 收敛容差：%.2e | 松弛因子：%.2f\n', ...
-                datestr(now, 'HH:MM:SS'), B, N, Boundary.Q_total, ...
+                datetime('now', 'Format', 'HH:mm:ss'), B, N, Boundary.Q_total, ...
                 mat2str(Boundary.inlet_node), mat2str(Boundary.outlet_node), ...
                 SolverOptions.max_iter, SolverOptions.tolerance, SolverOptions.relaxation);
             gps.ui.append_to_textarea(app.TextArea, msg);
@@ -233,13 +237,24 @@ function [Q, Results, success] = solve_network_from_ui(app)
 
         success = Results.converged;
 
+        % ========== 6. 更新 UI 输出（结果表格 + 有向网络图） ==========
+        try
+            update_results_ui(app, Branches, Q, Results);
+        catch ME_ui
+            % UI 输出失败不影响求解结果
+            if isprop(app, 'TextArea') && ~isempty(app.TextArea)
+                msg = sprintf('[%s] ? 结果展示失败：%s\n', datetime('now', 'Format', 'HH:mm:ss'), ME_ui.message);
+                gps.ui.append_to_textarea(app.TextArea, msg);
+            end
+        end
+
         % ========== 6. 显示结果 ==========
         if success
             % 向 TextArea 输出成功信息和详细结果
             if isprop(app, 'TextArea') && ~isempty(app.TextArea)
                 % 构建详细结果消息
                 msg = sprintf('[%s] ✓ 求解成功！\n迭代次数：%d | 最大回路残差：%.6e | 最大节点残差：%.6e\n', ...
-                    datestr(now, 'HH:MM:SS'), Results.iterations, Results.max_residual, max(abs(Results.node_residual)));
+                    datetime('now', 'Format', 'HH:mm:ss'), Results.iterations, Results.max_residual, max(abs(Results.node_residual)));
 
                 % 添加分支风量信息（所有分支）
                 msg = [msg, sprintf('各分支风量：\n')];
@@ -262,7 +277,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
                     % 7.3 向 TextArea 输出 VERBOSE 信息
                     if isprop(app, 'TextArea') && ~isempty(app.TextArea) && strlength(filePath) > 0
                         msg = sprintf('[%s] ✓ VERBOSE 模式：已生成柱状图和结果文件\n文件路径：%s\n', ...
-                            datestr(now, 'HH:MM:SS'), filePath);
+                            datetime('now', 'Format', 'HH:mm:ss'), filePath);
                         gps.ui.append_to_textarea(app.TextArea, msg);
                     end
 
@@ -270,7 +285,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
                     % VERBOSE 输出失败不影响求解结果
                     if isprop(app, 'TextArea') && ~isempty(app.TextArea)
                         msg = sprintf('[%s] ⚠ VERBOSE 模式输出失败：%s\n', ...
-                            datestr(now, 'HH:MM:SS'), ME_verbose.message);
+                            datetime('now', 'Format', 'HH:mm:ss'), ME_verbose.message);
                         gps.ui.append_to_textarea(app.TextArea, msg);
                     end
                 end
@@ -279,7 +294,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
             % 向 TextArea 输出警告信息
             if isprop(app, 'TextArea') && ~isempty(app.TextArea)
                 msg = sprintf('[%s] ⚠ 求解未完全收敛\n迭代次数：%d | 最大残差：%.6e\n建议：增加最大迭代数或调整松弛因子\n', ...
-                    datestr(now, 'HH:MM:SS'), Results.iterations, Results.max_residual);
+                    datetime('now', 'Format', 'HH:mm:ss'), Results.iterations, Results.max_residual);
                 gps.ui.append_to_textarea(app.TextArea, msg);
             end
         end
@@ -290,11 +305,66 @@ function [Q, Results, success] = solve_network_from_ui(app)
 
         % 向 TextArea 输出错误信息
         if isprop(app, 'TextArea') && ~isempty(app.TextArea)
-            msg = sprintf('[%s] ✗ 求解失败\n错误：%s\n', datestr(now, 'HH:MM:SS'), ME.message);
+            msg = sprintf('[%s] ✗ 求解失败\n错误：%s\n', datetime('now', 'Format', 'HH:mm:ss'), ME.message);
             gps.ui.append_to_textarea(app.TextArea, msg);
         end
 
         % 重新抛出错误（可选，便于调试）
         % rethrow(ME);
     end
+end
+
+
+function update_results_ui(app, Branches, Q, Results)
+    % 1) 在 UITable2 中展示求解结果（如存在）
+    if isprop(app, 'UITable2') && ~isempty(app.UITable2)
+        T = build_results_table(Branches, Q, Results);
+        app.UITable2.Data = T;
+        if isprop(app.UITable2, 'ColumnName')
+            app.UITable2.ColumnName = {'巷道ID', '起点', '终点', '风阻', '风量', '风压降'};
+        end
+        if isprop(app.UITable2, 'ColumnEditable')
+            app.UITable2.ColumnEditable = false;
+        end
+    end
+
+    % 2) 在 UIAxes 中绘制有向通风网络图（如存在）
+    if isprop(app, 'UIAxes') && ~isempty(app.UIAxes) && isprop(app, 'UITable') && ~isempty(app.UITable)
+        gps.ui.plot_network_digraph(app.UITable, Q, Results, app.UIAxes, app);
+    end
+end
+
+
+function T = build_results_table(Branches, Q, Results)
+    % 优先使用求解器提供的“风向对齐”结果（Q>=0 且起止点已同步修正）
+    Branches_out = Branches;
+    Q_out = Q(:);
+    if isfield(Results, 'Branches_flow_aligned') && isfield(Results, 'Q_flow_aligned')
+        Branches_out = Results.Branches_flow_aligned;
+        Q_out = Results.Q_flow_aligned(:);
+    else
+        neg = (Q_out < 0);
+        tmp = Branches_out.from_node(neg);
+        Branches_out.from_node(neg) = Branches_out.to_node(neg);
+        Branches_out.to_node(neg) = tmp;
+        Q_out(neg) = -Q_out(neg);
+    end
+
+    % 风压降（正值）
+    B = numel(Branches_out.id);
+    if isfield(Results, 'pressure_drop') && numel(Results.pressure_drop) == B
+        deltaP = Results.pressure_drop(:);
+    else
+        deltaP = Branches_out.R(:) .* (abs(Q_out(:)) .^ 2);
+    end
+
+    T = table( ...
+        Branches_out.id(:), ...
+        Branches_out.from_node(:), ...
+        Branches_out.to_node(:), ...
+        Branches_out.R(:), ...
+        Q_out(:), ...
+        deltaP(:), ...
+        'VariableNames', {'branch_id', 'from_node', 'to_node', 'resistance', 'flow_rate', 'pressure_drop'} ...
+    );
 end

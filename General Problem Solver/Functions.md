@@ -61,7 +61,7 @@ Branches.R         = [0.12;0.08;0.10];
 - `Results.residual_history`（double 向量）：残差历史（长度为迭代次数）
 - `Results.node_residual`（`N×1`）：节点守恒残差 `A*Q-b`
 - `Results.LoopMatrix`（`M×B`）：基本回路矩阵
-- `Results.pressure_diff_signed` / `Results.pressure_diff_abs`（`B×1`）：各分支压降（有符号/绝对值）
+- `Results.pressure_drop`（`B×1`）：各分支压降（正值）
 - `Results.network_info`（struct）：网络规模信息（`N/B/M`）
 
 ---

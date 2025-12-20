@@ -11,7 +11,7 @@ function filePath = export_solution_to_csv(Branches, Q, Results, filePath)
 % 输入：
 %   Branches: 分支结构体（包含 id, from_node, to_node, R）
 %   Q: 各分支风量（B×1 向量，单位：m³/s）
-%   Results: 求解结果结构体（包含 pressure_diff_signed）
+%   Results: 求解结果结构体（包含 pressure_drop）
 %   filePath: 可选，输出文件路径（不提供则弹出保存对话框）
 %
 % 输出：
@@ -48,12 +48,26 @@ function filePath = export_solution_to_csv(Branches, Q, Results, filePath)
         error('风量向量长度与分支数不匹配');
     end
 
-    % 计算风压降（有符号）
-    if isfield(Results, 'pressure_diff_signed')
-        deltaP = Results.pressure_diff_signed;
+    % 读取数据
+    Branches_out = Branches;
+    Q_out = Q(:);
+    if isfield(Results, 'Branches_flow_aligned') && isfield(Results, 'Q_flow_aligned')
+        Branches_out = Results.Branches_flow_aligned;
+        Q_out = Results.Q_flow_aligned(:);
     else
-        % 如果没有，重新计算
-        deltaP = Branches.R(:) .* Q(:) .* abs(Q(:));
+        % 兼容：若未提供，则在导出阶段本地修正
+        neg = (Q_out < 0);
+        temp = Branches_out.from_node(neg);
+        Branches_out.from_node(neg) = Branches_out.to_node(neg);
+        Branches_out.to_node(neg) = temp;
+        Q_out(neg) = -Q_out(neg);
+    end
+
+    % 计算风压降（正值）
+    if isfield(Results, 'pressure_drop') && numel(Results.pressure_drop) == B
+        deltaP = Results.pressure_drop(:);
+    else
+        deltaP = Branches_out.R(:) .* Q_out(:) .* abs(Q_out(:));
     end
 
     % 如果未指定文件路径，弹出保存对话框
@@ -70,17 +84,6 @@ function filePath = export_solution_to_csv(Branches, Q, Results, filePath)
         filePath = string(fullfile(fpath, fname));
     end
 
-    % 创建结果表格
-    T = table( ...
-        Branches.id(:), ...
-        Branches.from_node(:), ...
-        Branches.to_node(:), ...
-        Branches.R(:), ...
-        Q(:), ...
-        deltaP(:), ...
-        'VariableNames', {'branch_id', 'from_node', 'to_node', 'resistance', 'flow_rate', 'pressure_drop'} ...
-    );
-
     % 写入 CSV 文件（带注释头）
     try
         fid = fopen(filePath, 'w', 'n', 'UTF-8');
@@ -91,7 +94,7 @@ function filePath = export_solution_to_csv(Branches, Q, Results, filePath)
         % 写入注释头
         fprintf(fid, '# 通风网络求解结果\n');
         fprintf(fid, '# ========================================\n');
-        fprintf(fid, '# 导出时间: %s\n', datestr(now, 'yyyy-mm-dd HH:MM:SS'));
+        fprintf(fid, '# 导出时间: %s\n', char(datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss')));
         fprintf(fid, '# 分支数量: %d\n', B);
         fprintf(fid, '# ========================================\n');
         fprintf(fid, '#\n');
@@ -109,15 +112,26 @@ function filePath = export_solution_to_csv(Branches, Q, Results, filePath)
         fprintf(fid, '#   - from_node    : 起点节点编号\n');
         fprintf(fid, '#   - to_node      : 终点节点编号\n');
         fprintf(fid, '#   - resistance   : 通风阻力 (N·s²/m⁸)\n');
-        fprintf(fid, '#   - flow_rate    : 风量 (m³/s，正值表示顺流，负值表示逆流)\n');
-        fprintf(fid, '#   - pressure_drop: 风压降 (Pa，正值表示压降，负值表示压升)\n');
+        fprintf(fid, '#   - flow_rate    : 风量 (m³/s，已按实际风向对齐为非负)\n');
+        fprintf(fid, '#   - pressure_drop: 风压降 (Pa，沿风向定义为非负)\n');
         fprintf(fid, '# ========================================\n');
         fprintf(fid, '\n');
 
         % 写入表头
         fprintf(fid, 'branch_id,from_node,to_node,resistance,flow_rate,pressure_drop\n');
 
-        % 写入数据行
+        % 创建结果表格
+        T = table( ...
+          Branches_out.id(:), ...
+          Branches_out.from_node(:), ...
+          Branches_out.to_node(:), ...
+          Branches_out.R(:), ...
+          Q_out(:), ...
+          deltaP(:), ...
+          'VariableNames', {'branch_id', 'from_node', 'to_node', 'resistance', 'flow_rate', 'pressure_drop'} ...
+          );
+
+        % 写入数据行  
         for i = 1:B
             fprintf(fid, '%d,%d,%d,%.6g,%.6g,%.6g\n', ...
                 T.branch_id(i), ...
