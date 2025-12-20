@@ -1,5 +1,6 @@
 stages:
   - pages
+  - release
 
 pages:
   image: node:22
@@ -36,3 +37,39 @@ pages:
     paths:
       - public
     expire_in: 1 week
+
+release_assets:
+  image: alpine:3.20
+  stage: release
+  rules:
+    - if: '$CI_COMMIT_TAG == "v1.2.0"'
+    - when: never
+  script:
+    - ASSET_SRC="General Problem Solver/ui/SimpleVentilationNetworkSolver_${CI_COMMIT_TAG}.mlappinstall"
+    - test -f "$ASSET_SRC"
+    - mkdir -p release-assets
+    - cp "$ASSET_SRC" "release-assets/SimpleVentilationNetworkSolver_${CI_COMMIT_TAG}.mlappinstall"
+  artifacts:
+    paths:
+      - release-assets/
+    expire_in: 1 year
+
+create_release:
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  stage: release
+  needs:
+    - job: release_assets
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_TAG == "v1.2.0"'
+    - when: never
+  script:
+    - echo "Creating GitLab Release for ${CI_COMMIT_TAG}"
+  release:
+    tag_name: "$CI_COMMIT_TAG"
+    name: "v1.2.0"
+    description: "Release v1.2.0"
+    assets:
+      links:
+        - name: "SimpleVentilationNetworkSolver_v1.2.0.mlappinstall"
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/release-assets/SimpleVentilationNetworkSolver_${CI_COMMIT_TAG}.mlappinstall?job=release_assets"
