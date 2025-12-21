@@ -2,10 +2,10 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
 % 通用通风网络求解器（Hardy Cross），边界采用"入/回风节点"
 %
 % Branches（必需字段）：
-%   .id        (B×1) 分支编号（要求为 1..B）
 %   .from_node (B×1) 起点节点（定义分支正方向）
 %   .to_node   (B×1) 终点节点
 %   .R         (B×1) 风阻系数（正数）
+%   .id        (B×1, 可选) 分支编号/标签（建议唯一，用于展示与导出）
 %
 % Boundary（必需字段）：
 %   .inlet_node  (标量或向量) 入风节点编号
@@ -55,17 +55,40 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
     if ~isfield(SolverOptions, 'relaxation'); SolverOptions.relaxation = 1.0; end
     if ~isfield(SolverOptions, 'verbose');    SolverOptions.verbose = true; end
 
-    B = length(Branches.id);
-    if ~isequal(sort(Branches.id(:)), (1:B)')
-        error('Branches.id 必须为 1..B 的连续编号');
+    if ~isfield(Branches, 'from_node') || ~isfield(Branches, 'to_node') || ~isfield(Branches, 'R')
+        error('Branches 必须包含 from_node / to_node / R 字段');
     end
 
+    from_node = Branches.from_node(:);
+    to_node = Branches.to_node(:);
     R = Branches.R(:);
+
+    B = numel(from_node);
+    if numel(to_node) ~= B || numel(R) ~= B
+        error('Branches 字段长度不一致：from_node/to_node/R 必须均为 B×1');
+    end
+    if B == 0
+        error('网络分支数为 0');
+    end
+
+    if isfield(Branches, 'id')
+        ids = Branches.id(:);
+        if numel(ids) ~= B
+            error('Branches.id 长度与分支数不一致');
+        end
+        if any(~isfinite(ids))
+            error('Branches.id 必须为有限数值');
+        end
+        if numel(unique(ids)) ~= B
+            error('Branches.id 必须唯一（存在重复分支编号/标签）');
+        end
+    end
+
     if any(~isfinite(R)) || any(R <= 0)
         error('风阻系数 R 必须为有限正数');
     end
 
-    N = max([Branches.from_node(:); Branches.to_node(:)]);
+    N = max([from_node; to_node]);
     if N < 2
         error('节点数过少');
     end
@@ -87,7 +110,7 @@ function [Q, Results] = ventilation_network_solver_generic(Branches, Boundary, S
     end
 
     % 连通性检查（无向）
-    edges = [Branches.from_node(:), Branches.to_node(:)];
+    edges = [from_node, to_node];
     G = graph(edges(:, 1), edges(:, 2));
     bins = conncomp(G);
     if max(bins) > 1

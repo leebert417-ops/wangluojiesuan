@@ -11,7 +11,7 @@
 %
 % 输入参数：
 %   Branches - 分支数据结构体
-%              .id         分支编号 (B×1)
+%              .id         分支编号/标签 (B×1，可选但建议唯一)
 %              .from_node  起点节点 (B×1)
 %              .to_node    终点节点 (B×1)
 %
@@ -21,11 +21,14 @@
 %                +1: 分支方向与回路遍历方向一致
 %                -1: 分支方向与回路遍历方向相反
 %                 0: 分支不在该回路中
+%                注意：LoopMatrix 的列索引为“分支在 Branches 中的行索引 e=1..B”，
+%                      与 Branches.id 的数值无关（Branches.id 仅作为标签使用）。
 %
 %   LoopInfo   - 回路详细信息结构体数组（长度为 M）
-%                (k).branches      回路k包含的分支编号列表
+%                (k).branches      回路k包含的分支索引列表（行索引 1..B）
 %                (k).signs         对应的方向符号列表
-%                (k).chord_branch  形成该回路的非树边（弦）
+%                (k).chord_branch  形成该回路的非树边（弦，分支索引）
+%                (k).branches_id / (k).chord_branch_id  若提供 Branches.id，则给出对应标签
 %
 % 示例：
 %   Branches.id = (1:8)';
@@ -44,8 +47,29 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
 
     %% ========== 第1步：提取网络拓扑参数 ==========
 
-    B = length(Branches.id);                              % 分支总数
-    N = max([Branches.from_node; Branches.to_node]);      % 节点总数
+    if ~isstruct(Branches) || ~isfield(Branches, 'from_node') || ~isfield(Branches, 'to_node')
+        error('Branches 必须为结构体，且包含 from_node 与 to_node 字段');
+    end
+
+    from_node = Branches.from_node(:);
+    to_node = Branches.to_node(:);
+
+    B = numel(from_node);                                 % 分支总数（行索引 e=1..B）
+    if numel(to_node) ~= B
+        error('Branches.from_node 与 Branches.to_node 长度不一致');
+    end
+    if B == 0
+        error('网络分支数为 0，无法识别回路');
+    end
+
+    if any(~isfinite(from_node)) || any(~isfinite(to_node))
+        error('节点编号必须为有限数值');
+    end
+    if any(from_node < 1) || any(to_node < 1) || any(mod(from_node, 1) ~= 0) || any(mod(to_node, 1) ~= 0)
+        error('节点编号必须为从 1 开始的正整数');
+    end
+
+    N = max([from_node; to_node]);                        % 节点总数（按最大编号计）
     M = B - N + 1;                                        % 理论独立回路数
 
     % 检查网络连通性（简单检查）
@@ -56,30 +80,121 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
     if M == 0
         warning('网络无回路（树结构），返回空回路矩阵');
         LoopMatrix = zeros(0, B);
-        LoopInfo = struct('branches', {}, 'signs', {}, 'chord_branch', {});
+        LoopInfo = struct('branches', {}, 'signs', {}, 'chord_branch', {}, ...
+            'branches_id', {}, 'chord_branch_id', {});
         return;
     end
 
-    %% ========== 第2步：构建 MATLAB Graph 对象 ==========
-
-    % 使用 MATLAB 内置 graph 对象（无向图）
-    % 注意：此处忽略分支方向，仅用于生成树构建
-
-    G = graph(Branches.from_node, Branches.to_node);
-
-    % 检查图的连通性
-    bins = conncomp(G);
-    if max(bins) > 1
-        error('网络不连通！存在 %d 个独立子图。', max(bins));
+    if isfield(Branches, 'id')
+        ids = Branches.id(:);
+        if numel(ids) ~= B
+            error('Branches.id 长度与分支数不一致');
+        end
+        if any(~isfinite(ids))
+            error('Branches.id 必须为有限数值');
+        end
+        if numel(unique(ids)) ~= B
+            error('Branches.id 必须唯一（存在重复分支编号/标签）');
+        end
+    else
+        ids = (1:B)'; %#ok<NASGU>
     end
 
-    %% ========== 第3步：生成生成树（DFS 遍历）==========
+    %% ========== 第2步：构建无向邻接（以“分支索引”为一等公民） ==========
 
-    % 使用深度优先搜索（DFS）构建生成树
-    % MATLAB 的 dfsearch 返回访问序列，需要手动提取树边
+    incident_branches = cell(N, 1);
+    for e = 1:B
+        u = from_node(e);
+        v = to_node(e);
+        incident_branches{u}(end+1, 1) = e;
+        if v ~= u
+            incident_branches{v}(end+1, 1) = e;
+        end
+    end
 
-    root_node = 1;  % 从节点1开始（可选择任意节点）
-    [tree_edges, is_tree_edge] = build_spanning_tree_dfs(G, root_node, Branches);
+    % 并联分支诊断（可选输出）
+    if verbose
+        uv = sort([from_node, to_node], 2);
+        [~, ~, g] = unique(uv, 'rows');
+        cnt = accumarray(g, 1);
+        n_parallel_groups = sum(cnt > 1);
+        if n_parallel_groups > 0
+            fprintf('检测到并联分支：%d 组（同一对节点之间存在多条分支）\n', n_parallel_groups);
+        end
+    end
+
+    %% ========== 第3步：连通性检查（无向） ==========
+
+    root_node = 1;  % 与现有实现保持一致（节点编号从 1..N）
+    visited_conn = false(N, 1);
+    queue = zeros(N, 1);
+    qh = 1;
+    qt = 1;
+    queue(qt) = root_node;
+    visited_conn(root_node) = true;
+
+    while qh <= qt
+        node = queue(qh);
+        qh = qh + 1;
+
+        edges = incident_branches{node};
+        for i = 1:numel(edges)
+            e = edges(i);
+            other = other_endpoint(from_node, to_node, e, node);
+            if other == 0
+                continue;
+            end
+            if ~visited_conn(other)
+                visited_conn(other) = true;
+                qt = qt + 1;
+                queue(qt) = other;
+            end
+        end
+    end
+
+    if sum(visited_conn) < N
+        error('网络不连通：存在不可达节点（数量=%d，根节点=%d）', sum(~visited_conn), root_node);
+    end
+
+    %% ========== 第4步：生成生成树（DFS 遍历，支持并联边） ==========
+
+    visited = false(N, 1);
+    parent_node = zeros(N, 1);
+    parent_branch = zeros(N, 1);
+    depth = zeros(N, 1);
+
+    is_tree_edge = false(B, 1);
+
+    stack = zeros(N, 1);
+    sp = 1;
+    stack(sp) = root_node;
+    visited(root_node) = true;
+
+    while sp > 0
+        node = stack(sp);
+        sp = sp - 1;
+
+        edges = incident_branches{node};
+        for i = 1:numel(edges)
+            e = edges(i);
+            other = other_endpoint(from_node, to_node, e, node);
+            if other == 0 || other == node
+                continue;
+            end
+            if ~visited(other)
+                visited(other) = true;
+                parent_node(other) = node;
+                parent_branch(other) = e;
+                depth(other) = depth(node) + 1;
+                is_tree_edge(e) = true;
+
+                sp = sp + 1;
+                stack(sp) = other;
+            end
+        end
+    end
+
+    tree_edges = find(is_tree_edge);
 
     % 识别非树边（弦）
     chord_branches = find(~is_tree_edge);
@@ -98,48 +213,88 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
 
     M_actual = length(chord_branches);
 
-    %% ========== 第4步：对每条非树边构建基本回路 ==========
+    %% ========== 第5步：对每条非树边构建基本回路 ==========
 
     LoopMatrix = zeros(M_actual, B);
-    LoopInfo = struct('branches', {}, 'signs', {}, 'chord_branch', {});
+    LoopInfo = repmat(struct( ...
+        'branches', [], ...
+        'signs', [], ...
+        'chord_branch', [], ...
+        'branches_id', [], ...
+        'chord_branch_id', []), M_actual, 1);
+
+    % 树边快速索引：tree_branch(u,v)=分支索引 e（树中同一对节点只有一条边）
+    tree_branch = sparse(N, N);
+    for node = 1:N
+        p = parent_node(node);
+        e = parent_branch(node);
+        if p ~= 0 && e ~= 0
+            tree_branch(node, p) = e;
+            tree_branch(p, node) = e;
+        end
+    end
 
     for k = 1:M_actual
-        chord_id = chord_branches(k);  % 当前非树边（弦）的分支编号
+        chord_e = chord_branches(k);  % 当前非树边（弦）的分支索引
 
         % 获取弦的端点
-        u = Branches.from_node(chord_id);
-        v = Branches.to_node(chord_id);
+        u = from_node(chord_e);
+        v = to_node(chord_e);
 
-        % 在生成树中找到 u → v 的唯一路径
-        % 使用 MATLAB shortestpath（在树中就是唯一路径）
-        tree_graph = build_tree_graph(tree_edges, Branches, N);
-        % 为保证回路方向与弦（chord）分支方向一致，取树路径 v -> u，然后再走弦 u -> v 闭合
-        [tree_path_nodes, ~] = shortestpath(tree_graph, v, u);
-
-        if isempty(tree_path_nodes)
-            warning('回路 %d：在生成树中未找到节点 %d → %d 的路径！', k, u, v);
+        if u == v
+            warning('检测到自环分支（from_node==to_node）：分支索引 e=%d，将作为长度为1的回路处理', chord_e);
+            LoopMatrix(k, chord_e) = +1;
+            LoopInfo(k).branches = chord_e;
+            LoopInfo(k).signs = +1;
+            LoopInfo(k).chord_branch = chord_e;
+            if isfield(Branches, 'id')
+                LoopInfo(k).branches_id = Branches.id(chord_e);
+                LoopInfo(k).chord_branch_id = Branches.id(chord_e);
+            else
+                LoopInfo(k).branches_id = chord_e;
+                LoopInfo(k).chord_branch_id = chord_e;
+            end
             continue;
         end
 
-        % 将节点路径转换为分支路径
-        tree_path_branches = nodes_to_branches(tree_path_nodes, tree_edges, Branches);
+        % 为保证回路方向与弦（chord）分支方向一致，取树路径 v -> u，然后再走弦 u -> v 闭合
+        tree_path_nodes = tree_path_in_nodes(v, u, parent_node, depth);
 
-        % 基本回路 = 树路径 + 弦
-        loop_branches = [tree_path_branches; chord_id];
+        % 节点路径 -> 树边序列，并确定方向符号
+        n_steps = numel(tree_path_nodes) - 1;
+        tree_path_branches = zeros(n_steps, 1);
+        tree_path_signs = zeros(n_steps, 1);
 
-        % 确定每条分支在回路中的方向符号
-        loop_signs = determine_loop_signs(loop_branches, tree_path_nodes, chord_id, Branches);
-
-        % 填充回路矩阵
-        for i = 1:length(loop_branches)
-            b_id = loop_branches(i);
-            LoopMatrix(k, b_id) = loop_signs(i);
+        for i = 1:n_steps
+            n1 = tree_path_nodes(i);
+            n2 = tree_path_nodes(i + 1);
+            e = full(tree_branch(n1, n2));
+            if e == 0
+                error('生成树路径转换失败：未找到节点 %d → %d 的树边', n1, n2);
+            end
+            tree_path_branches(i) = e;
+            if from_node(e) == n1 && to_node(e) == n2
+                tree_path_signs(i) = +1;
+            else
+                tree_path_signs(i) = -1;
+            end
         end
 
-        % 保存回路详细信息
+        loop_branches = [tree_path_branches; chord_e];
+        loop_signs = [tree_path_signs; +1];
+
+        LoopMatrix(k, loop_branches) = loop_signs(:).';
+
         LoopInfo(k).branches = loop_branches;
         LoopInfo(k).signs = loop_signs;
-        LoopInfo(k).chord_branch = chord_id;
+        LoopInfo(k).chord_branch = chord_e;
+        if isfield(Branches, 'id')
+            LoopInfo(k).branches_id = Branches.id(loop_branches);
+            LoopInfo(k).chord_branch_id = Branches.id(chord_e);
+        else
+            LoopInfo(k).branches_id = loop_branches;
+            LoopInfo(k).chord_branch_id = chord_e;
+        end
     end
 
     if verbose
@@ -149,158 +304,56 @@ function [LoopMatrix, LoopInfo] = identify_fundamental_loops(Branches, verbose)
 end
 
 
-%% ========== 辅助函数：构建生成树（DFS） ==========
+%% ========== 辅助函数：另一端节点 ==========
 
-function [tree_edges, is_tree_edge] = build_spanning_tree_dfs(G, root, Branches)
-    % 使用深度优先搜索构建生成树
-    % 输出：
-    %   tree_edges   : 树边的分支编号列表
-    %   is_tree_edge : 布尔向量 (B×1)，标记每条分支是否为树边
-
-    B = length(Branches.id);
-    N = numnodes(G);
-
-    visited = false(N, 1);
-    tree_edges = [];
-    is_tree_edge = false(B, 1);
-
-    % DFS 递归函数
-    function dfs(node)
-        visited(node) = true;
-
-        neighbors = G.neighbors(node);
-        for i = 1:length(neighbors)
-            next_node = neighbors(i);
-
-            if ~visited(next_node)
-                % 找到对应的分支编号
-                branch_id = find_branch_id(node, next_node, Branches);
-
-                if ~isempty(branch_id)
-                    tree_edges = [tree_edges; branch_id];
-                    is_tree_edge(branch_id) = true;
-                end
-
-                % 递归访问
-                dfs(next_node);
-            end
-        end
-    end
-
-    % 从根节点开始 DFS
-    dfs(root);
-
-    % 检查是否遍历了所有节点
-    if sum(visited) < N
-        warning('DFS 未能遍历所有节点！网络可能不连通。');
-    end
-end
-
-
-%% ========== 辅助函数：查找分支编号 ==========
-
-function branch_id = find_branch_id(node1, node2, Branches)
-    % 在 Branches 中查找连接 node1 和 node2 的分支编号
-    % 注意：分支可能是 node1→node2 或 node2→node1
-
-    idx1 = find(Branches.from_node == node1 & Branches.to_node == node2);
-    idx2 = find(Branches.from_node == node2 & Branches.to_node == node1);
-
-    if ~isempty(idx1)
-        branch_id = Branches.id(idx1(1));
-    elseif ~isempty(idx2)
-        branch_id = Branches.id(idx2(1));
+function other = other_endpoint(from_node, to_node, e, current)
+    u = from_node(e);
+    v = to_node(e);
+    if current == u
+        other = v;
+    elseif current == v
+        other = u;
     else
-        branch_id = [];
+        other = 0;
     end
 end
 
 
-%% ========== 辅助函数：构建生成树 Graph 对象 ==========
+%% ========== 辅助函数：生成树中两点的唯一路径（节点序列）==========
 
-function tree_graph = build_tree_graph(tree_edges, Branches, N)
-    % 根据树边列表构建生成树的 Graph 对象
+function path_nodes = tree_path_in_nodes(start_node, goal_node, parent_node, depth)
+    a = start_node;
+    b = goal_node;
 
-    if isempty(tree_edges)
-        tree_graph = graph([], [], N);
-        return;
-    end
+    path_a = a;
+    path_b = b;
 
-    from_nodes = zeros(length(tree_edges), 1);
-    to_nodes = zeros(length(tree_edges), 1);
-
-    for i = 1:length(tree_edges)
-        b_id = tree_edges(i);
-        idx = find(Branches.id == b_id, 1);
-        from_nodes(i) = Branches.from_node(idx);
-        to_nodes(i) = Branches.to_node(idx);
-    end
-
-    tree_graph = graph(from_nodes, to_nodes);
-end
-
-
-%% ========== 辅助函数：节点路径转分支路径 ==========
-
-function branch_path = nodes_to_branches(node_path, tree_edges, Branches)
-    % 将节点序列转换为分支编号序列
-
-    branch_path = [];
-
-    for i = 1:(length(node_path) - 1)
-        n1 = node_path(i);
-        n2 = node_path(i+1);
-
-        % 查找连接 n1 和 n2 的树边
-        b_id = find_branch_id(n1, n2, Branches);
-
-        if isempty(b_id)
-            warning('节点路径转换失败：未找到节点 %d → %d 的分支', n1, n2);
-        else
-            branch_path = [branch_path; b_id];
+    while depth(a) > depth(b)
+        a = parent_node(a);
+        if a == 0
+            error('生成树路径查找失败：start_node 无法回溯到根');
         end
+        path_a(end+1, 1) = a; %#ok<AGROW>
     end
-end
 
-
-%% ========== 辅助函数：确定回路方向符号 ==========
-
-function loop_signs = determine_loop_signs(loop_branches, node_path, chord_id, Branches)
-    % 确定回路中每条分支的方向符号（+1 或 -1）
-    % 策略：统一按照回路遍历方向（节点路径方向 + 弦方向）
-
-    loop_signs = zeros(length(loop_branches), 1);
-
-    % 处理树路径上的分支
-    for i = 1:(length(node_path) - 1)
-        n1 = node_path(i);
-        n2 = node_path(i+1);
-
-        % 找到对应的分支
-        b_id = find_branch_id(n1, n2, Branches);
-        idx_in_loop = find(loop_branches == b_id, 1);
-
-        if isempty(idx_in_loop)
-            continue;
+    while depth(b) > depth(a)
+        b = parent_node(b);
+        if b == 0
+            error('生成树路径查找失败：goal_node 无法回溯到根');
         end
+        path_b(end+1, 1) = b; %#ok<AGROW>
+    end
 
-        % 获取分支实际方向
-        b_idx = find(Branches.id == b_id, 1);
-        actual_from = Branches.from_node(b_idx);
-        actual_to = Branches.to_node(b_idx);
-
-        % 判断分支方向是否与遍历方向一致
-        if actual_from == n1 && actual_to == n2
-            loop_signs(idx_in_loop) = +1;  % 方向一致
-        else
-            loop_signs(idx_in_loop) = -1;  % 方向相反
+    while a ~= b
+        a = parent_node(a);
+        b = parent_node(b);
+        if a == 0 || b == 0
+            error('生成树路径查找失败：无法找到公共祖先');
         end
+        path_a(end+1, 1) = a; %#ok<AGROW>
+        path_b(end+1, 1) = b; %#ok<AGROW>
     end
 
-    % 处理弦（闭合边）
-    chord_idx_in_loop = find(loop_branches == chord_id, 1);
-    if ~isempty(chord_idx_in_loop)
-        % 弦的方向按照其定义方向取正
-        loop_signs(chord_idx_in_loop) = +1;
-    end
+    % path_a 与 path_b 都以 LCA 结尾
+    path_nodes = [path_a; flipud(path_b(1:end-1))];
 end
