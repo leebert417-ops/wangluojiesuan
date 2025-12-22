@@ -108,7 +108,7 @@
 
 **2. 无需MATLAB的打包版本**：
 
-下载[web下载器](/General%20Problem%20Solver/package/SimpleVentilationNetworkSolverAppv1_1_0/for_redistribution/MyAppInstaller_web.exe)
+下载[web下载器](/General%20Problem%20Solver/package/SimpleVentilationNetworkSolver_v1_2_0/for_redistribution/MyAppInstaller_web.exe)
 
 然后双击自动下载，后续操作同上
 

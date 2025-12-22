@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.apptool" plugin-version="1.0">
-  <configuration build-checksum="153595322" file="D:\MATLAB\wangluojiesuan\General Problem Solver\ui\SimpleVentilationNetworkSolver.prj" location="D:\MATLAB\wangluojiesuan\General Problem Solver\ui" name="SimpleVentilationNetworkSolver" target="target.mlapps" target-name="打包为 App">
+  <configuration build-checksum="787860925" file="D:\MATLAB\wangluojiesuan\General Problem Solver\ui\SimpleVentilationNetworkSolver.prj" location="D:\MATLAB\wangluojiesuan\General Problem Solver\ui" name="SimpleVentilationNetworkSolver" target="target.mlapps" target-name="打包为 App">
     <param.appname>SimpleVentilationNetworkSolver</param.appname>
     <param.authnamewatermark>马腾腾</param.authnamewatermark>
     <param.email>namedhs@163.com</param.email>
@@ -17,6 +17,8 @@
     <param.output>${PROJECT_ROOT}</param.output>
     <param.guid>f37f84c1-d191-4ff2-b336-44b2622b7483</param.guid>
     <unset>
+      <param.authnamewatermark />
+      <param.email />
       <param.company />
       <param.icon />
       <param.icons />
@@ -29,7 +31,7 @@
       <param.output />
     </unset>
     <fileset.main>
-      <file>${PROJECT_ROOT}\NetworkSolverApp_exported.m</file>
+      <file>${PROJECT_ROOT}\NetworkSolverApp.mlapp</file>
     </fileset.main>
     <fileset.depfun>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+logic\identify_fundamental_loops.m</file>
@@ -42,6 +44,7 @@
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\export_uitable_to_branches_csv.m</file>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\import_branches_csv.m</file>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\import_branches_csv_to_uitable.m</file>
+      <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\plot_network_digraph.m</file>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\plot_network_graph.m</file>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\plot_solution_bars.m</file>
       <file>D:\MATLAB\wangluojiesuan\General Problem Solver\+gps\+ui\solve_network_from_ui.m</file>
