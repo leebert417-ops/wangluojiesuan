@@ -1,26 +1,16 @@
 % 主脚本：通风网络 Hardy Cross 求解与结果输出
 %
-% 功能：
-%   - 读取 network_data.csv 的 8 条巷道风阻 R；
-%   - 调用 ventilation_network_solver.m 计算各巷道风量 Q；
-%   - 输出结果表 ventilation_results.csv（中文表头）；
-%   - 生成结果图 ventilation_network_results.png（仅两张柱状图）。
-%
-% 版本：
-%   v1.0 (2025-12-18) - 初始版本
-%
-% 作者：东北大学 资源与土木工程学院 智采2201班 学生
 
 clear; clc;
 
 %% 输入
-data = readtable('network_data.csv');
-R = data.resistance(:)'; % 1×8
-Q_total = 100;           % m3/s
+data = readtable('network_data2.csv');
+R = data.resistance(:)'; % 1×11
+Q_total = 100;           % m^3/s
 
 %% 求解
 fprintf('开始使用 Hardy Cross 迭代求解...\n\n');
-[Q, iterations] = ventilation_network_solver(R, Q_total);
+[Q, iterations] = ventilation_network_solver2(R, Q_total);
 
 %% 结果派生量
 num_branches = numel(R);

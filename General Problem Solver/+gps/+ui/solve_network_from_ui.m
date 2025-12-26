@@ -259,7 +259,7 @@ function [Q, Results, success] = solve_network_from_ui(app)
                 % 添加分支风量信息（所有分支）
                 msg = [msg, sprintf('各分支风量：\n')];
                 for i = 1:B
-                    msg = [msg, sprintf('  分支 %2d：Q = %10.6f m³/s\n', i, Q(i))];
+                    msg = [msg, sprintf('  分支 %2d：Q = %10.6f m³/s\n', i, Results.Q_flow_aligned(i))];
                 end
 
                 gps.ui.append_to_textarea(app.TextArea, msg);
@@ -269,10 +269,10 @@ function [Q, Results, success] = solve_network_from_ui(app)
             if verboseOutput
                 try
                     % 7.1 绘制柱状图（风量和风压降）
-                    gps.ui.plot_solution_bars(Branches, Q, Results);
+                    gps.ui.plot_solution_bars(Branches, abs(Q), Results);
 
                     % 7.2 导出结果到 CSV 文件
-                    filePath = gps.ui.export_solution_to_csv(Branches, Q, Results);
+                    filePath = gps.ui.export_solution_to_csv(Branches, abs(Q), Results);
 
                     % 7.3 向 TextArea 输出 VERBOSE 信息
                     if isprop(app, 'TextArea') && ~isempty(app.TextArea) && strlength(filePath) > 0

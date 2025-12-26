@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.apptool" plugin-version="1.0">
-  <configuration build-checksum="1102356103" file="D:\MATLAB\wangluojiesuan\General Problem Solver\ui\SimpleVentilationNetworkSolver_v1.2.0.prj" location="D:\MATLAB\wangluojiesuan\General Problem Solver\ui" name="SimpleVentilationNetworkSolver_v1.2.0" target="target.mlapps" target-name="打包为 App">
+  <configuration build-checksum="330160443" file="D:\MATLAB\wangluojiesuan\General Problem Solver\ui\SimpleVentilationNetworkSolver_v1.2.0.prj" location="D:\MATLAB\wangluojiesuan\General Problem Solver\ui" name="SimpleVentilationNetworkSolver_v1.2.0" target="target.mlapps" target-name="打包为 App">
     <param.appname>SimpleVentilationNetworkSolver_v1.2.0</param.appname>
     <param.authnamewatermark>马腾腾</param.authnamewatermark>
     <param.email>namedhs@163.com</param.email>
